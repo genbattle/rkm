@@ -9,7 +9,7 @@ extern crate rand;
 The `kmeans` function provides a simple implementation of the standard k-means algorithm, as
 described [here](http://en.wikipedia.org/wiki/K-means_clustering#Standard_algorithm).
 */
-pub fn kmeans(data: &[[f32; 2]], k: u32) -> Vec<[f32; 2]> {
+pub fn kmeans(data: &[[f32; 2]], k: usize) -> Vec<[f32; 2]> {
     assert!(k >= 2); // this algorithm won't work with k < 2 at the moment
     // randomly select initial means from data set
     let mut rng = rand::thread_rng();
@@ -18,20 +18,23 @@ pub fn kmeans(data: &[[f32; 2]], k: u32) -> Vec<[f32; 2]> {
     let mut iters = 0;
     // loop until convergence is reached
     while !converged && iters < 40 { // TODO: sort out convergence criteria
-        let mut means_new: Vec<[f32; 2]> = vec![[0.0, 0.0]; k as usize];
+        let mut means_new: Vec<[f32; 2]> = vec![[0.0, 0.0]; k];
         {
             // Assignment step
             let clusters = data.iter().map(|&d|{
                 // find the mean that is closest
                 let mut distances = means.iter().map(|&m|{
-                    (m[0] - d[0]).powf(2.0) + (m[1] - d[1]).powf(2.0)
+                    let d0 = m[0] - d[0];
+                    let d1 = m[1] - d[1];
+                    d0 * d0 + d1 * d1
                 });
                 let mut min = distances.next().unwrap();
                 let mut index = 0;
+                // TODO: should be able to convert this to a fold or something?
                 for v in distances.enumerate() {
                     if v.1 < min {
                         min = v.1;
-                        index = v.0;
+                        index = v.0 + 1;
                     }
                 }
                 return index;
@@ -53,7 +56,6 @@ pub fn kmeans(data: &[[f32; 2]], k: u32) -> Vec<[f32; 2]> {
             converged = true;
         } else {
             means = means_new;
-            println!("got means {:?}", means);
         }
         iters += 1;
     }
