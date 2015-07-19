@@ -37,9 +37,8 @@ pub fn kmeans(data: &[[f32; 2]], k: usize) -> Vec<[f32; 2]>  {
     let mut rng = rand::thread_rng();
     let mut means: Vec<[f32; 2]> = rand::sample(&mut rng, data.iter(), k as usize).iter().map(|v|{*v.clone()}).collect();
     let mut converged = false;
-    let mut iters = 0;
     // loop until convergence is reached
-    while !converged && iters < 40 { // TODO: sort out convergence criteria
+    while !converged {
         let mut means_new: Vec<[f32; 2]> = vec![[0.0, 0.0]; k];
         {
             // Assignment step
@@ -64,7 +63,6 @@ pub fn kmeans(data: &[[f32; 2]], k: usize) -> Vec<[f32; 2]>  {
         } else {
             means = means_new;
         }
-        iters += 1;
     }
     return means;
 }
