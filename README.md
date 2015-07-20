@@ -1,6 +1,6 @@
 # RKM - Rust k-means #
 
-A simple Rust implementation of the [k-means clustering algorithm](http://en.wikipedia.org/wiki/K-means_clustering).
+A simple Rust implementation of the [k-means clustering algorithm](http://en.wikipedia.org/wiki/K-means_clustering) as a learning exercise.
 
 ### Data ###
 The iris.data file contains data obtained from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Iris). The data contains the following columns:
@@ -11,3 +11,6 @@ The iris.data file contains data obtained from the [UCI Machine Learning Reposit
  - class
  
  This data is used as a small test/benchmark of the k-means algorithm.
+
+ ### Licensing ###
+ This code is licensed under the MIT license.
