@@ -12,5 +12,5 @@ The iris.data file contains data obtained from the [UCI Machine Learning Reposit
  
  This data is used as a small test/benchmark of the k-means algorithm.
 
- ### Licensing ###
+### Licensing ###
  This code is licensed under the MIT license.
