@@ -35,7 +35,7 @@ pub fn kmeans(data: &[[f32; 2]], k: usize) -> Vec<[f32; 2]>  {
     assert!(data.len() > 1); // won't work with at least one data point
     // randomly select initial means from data set
     let mut rng = rand::thread_rng();
-    let mut means: Vec<[f32; 2]> = rand::sample(&mut rng, data.iter(), k as usize).iter().map(|v|{*v.clone()}).collect();
+    let mut means: Vec<[f32; 2]> = rand::sample(&mut rng, data.iter(), k).iter().map(|v|{*v.clone()}).collect();
     let mut converged = false;
     // loop until convergence is reached
     while !converged {
@@ -46,7 +46,7 @@ pub fn kmeans(data: &[[f32; 2]], k: usize) -> Vec<[f32; 2]>  {
                 find_closest(&d, &means)
             }).zip(data);
             // Update step
-            let mut means_count: Vec<usize> = vec![0; k as usize];
+            let mut means_count: Vec<usize> = vec![0; k];
             for v in clusters {
                 means_new[v.0][0] += v.1[0];
                 means_new[v.0][1] += v.1[1];
