@@ -13,8 +13,7 @@ use std::fmt::Debug;
 Numeric value trait, defines the types that can be used for the value of each dimension in a
 data point.
 */
-trait Num: Add + Sub + Mul + Div + PartialOrd + PartialEq + Copy + Debug {}
-impl<T> Num for T where T: Add + Sub + Mul + Div + PartialOrd + PartialEq + Copy + Debug {}
+trait Num: Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Div<Output=Self> + PartialOrd + PartialEq + Copy + Debug {}
 
 // kmeans data, for accessing 
 trait Data<T> where T: Index<usize> {
@@ -30,7 +29,7 @@ of that mean in the means slice.
 fn find_closest<T, U>(point: &T, means: &[T]) -> usize
 where
     T: Index<usize, Output=U>,
-    U: Add<Output=U> + Clone + Mul<Output=U> + PartialOrd + Sub<Output=U>
+    U: Num
 {
     // find the mean that is closest
     let mut distances = means.iter().map(|&m|{ // TODO: make this part of the data trait? At the very least T will need to be Iterator
@@ -57,7 +56,7 @@ described [here](http://en.wikipedia.org/wiki/K-means_clustering#Standard_algori
 pub fn kmeans<T, U>(data: &[T], k: usize) -> Vec<T>
 where
     T: Index<usize, Output=U>,
-    U: Add<Output=U> + Sub<Output=U> + Mul<Output=U> + Div<Output=U> + PartialOrd + PartialEq + Copy + Debug {
+    U: Num {
     assert!(k > 1); // this algorithm won't work with k < 2 at the moment
     assert!(data.len() > 1); // won't work with at least one data point
     // randomly select initial means from data set
@@ -75,7 +74,7 @@ where
             }).zip(data);
             // Update step
             let mut means_count: Vec<usize> = vec![0; k];
-            for _ in [0..]
+            //for _ in [0..]
             for v in clusters {
                 means_new[v.0][0] += v.1[0];
                 means_new[v.0][1] += v.1[1];
