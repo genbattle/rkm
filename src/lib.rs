@@ -14,12 +14,43 @@ Numeric value trait, defines the types that can be used for the value of each di
 data point.
 */
 trait Num: Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Div<Output=Self> + PartialOrd + PartialEq + Copy + Debug {}
+impl<T> Num for T where T: Add<Output=T> + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + PartialOrd + PartialEq + Copy + Debug {}
+
 
 // kmeans data, for accessing 
-trait Data<T> where T: Index<usize> {
-    type V: Num = T;
+trait Data<T> where T: Num {
+    fn len(&self) -> usize;
+    fn get(&self, index: usize) -> T;
+    fn set(&mut self, index: usize, value: T);
+    fn calc_mean(total: T, count: usize) -> T;
+}
+
+/*
+Data implementation for [f32; 2]
+
+The reason get and set are used instead of the `Index`/`IndexMut` traits is because built-in traits 
+cannot be implemented by a third party such as myself for built-in types; you must be the author
+of either the type or trait in a type->trait relationship.
+
+`calc_mean()`` is here because of the scalar cast from f32 to usize, which can't be done with a 
+generic type T.
+*/
+impl Data<f32> for [f32; 2] {
+    fn len(&self) -> usize {
+        2
+    }
     
-    fn len() -> usize;
+    fn get(&self, index: usize) -> f32 {
+        self[index]
+    }
+    
+    fn set(&mut self, index: usize, value: f32) {
+        self[index] = value;
+    }
+    
+    fn calc_mean(total: f32, count: usize) -> f32 {
+        total / count as f32
+    }
 }
 
 /*
@@ -28,13 +59,13 @@ of that mean in the means slice.
 */
 fn find_closest<T, U>(point: &T, means: &[T]) -> usize
 where
-    T: Index<usize, Output=U>,
+    T: Data<U>,
     U: Num
 {
     // find the mean that is closest
     let mut distances = means.iter().map(|&m|{ // TODO: make this part of the data trait? At the very least T will need to be Iterator
-        let d0 = m[0] - point[0];
-        let d1 = m[1] - point[1];
+        let d0 = m.get(0) - point.get(0);
+        let d1 = m.get(1) - point.get(1);
         d0 * d0 + d1 * d1
     });
     let mut min = distances.next().unwrap();
@@ -55,8 +86,9 @@ described [here](http://en.wikipedia.org/wiki/K-means_clustering#Standard_algori
 */
 pub fn kmeans<T, U>(data: &[T], k: usize) -> Vec<T>
 where
-    T: Index<usize, Output=U>,
-    U: Num {
+    T: Data<U>,
+    U: Num
+{
     assert!(k > 1); // this algorithm won't work with k < 2 at the moment
     assert!(data.len() > 1); // won't work with at least one data point
     // randomly select initial means from data set
@@ -76,16 +108,16 @@ where
             let mut means_count: Vec<usize> = vec![0; k];
             //for _ in [0..]
             for v in clusters {
-                means_new[v.0][0] += v.1[0];
-                means_new[v.0][1] += v.1[1];
+                means_new[v.0].set(0, means_new[v.0].get(0) + v.1.get(0));
+                means_new[v.0].set(1, means_new[v.0].get(1) + v.1.get(1));
                 means_count[v.0] += 1;
             }
             means_new = means_new.iter().zip(means_count.iter()).map(|v| {
-                [v.0[0] / *v.1, v.0[1] / *v.1]
+                [Data::calc_mean(v.0.get(0), *v.1), Data::calc_mean(v.0.get(1), *v.1)]
             }).collect();
         }
         if means_new.iter().zip(means.iter()).all(|v| {
-            v.0[0] == v.1[0] && v.0[1] == v.1[1]
+            v.0.get(0) == v.1.get(0) && v.0.get(1) == v.1.get(1)
         }) {
             converged = true;
         } else {
