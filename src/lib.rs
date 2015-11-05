@@ -90,7 +90,7 @@ where
     U: Num
 {
     assert!(k > 1); // this algorithm won't work with k < 2 at the moment
-    assert!(data.len() > 1); // won't work with at least one data point
+    assert!(data.len() > 1); // won't work without at least one data point
     // randomly select initial means from data set
     let mut rng = rand::thread_rng();
     let mut means: Vec<T> = rand::sample(&mut rng, data.iter(), k).iter().map(|v|{*v.clone()}).collect();
@@ -106,7 +106,6 @@ where
             }).zip(data);
             // Update step
             let mut means_count: Vec<usize> = vec![0; k];
-            //for _ in [0..]
             for v in clusters {
                 means_new[v.0].set(0, means_new[v.0].get(0) + v.1.get(0));
                 means_new[v.0].set(1, means_new[v.0].get(1) + v.1.get(1));
