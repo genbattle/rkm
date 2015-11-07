@@ -6,4 +6,5 @@ authors = ["Nick Sarten <gen.battle@gmail.com>"]
 [dependencies]
 csv = "*"
 rand = "*"
+num = "*"
 

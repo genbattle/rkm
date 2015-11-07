@@ -4,6 +4,7 @@ This create contains a simple implementation of the
 */
 
 extern crate rand;
+extern crate num;
 
 use std::ops::{Add, Sub, Mul, Div, Index};
 use std::cmp::{PartialOrd, PartialEq};
@@ -13,17 +14,17 @@ use std::fmt::Debug;
 Numeric value trait, defines the types that can be used for the value of each dimension in a
 data point.
 */
-trait Num: Add<Output=Self> + Sub<Output=Self> + Mul<Output=Self> + Div<Output=Self> + PartialOrd + PartialEq + Copy + Debug {}
-impl<T> Num for T where T: Add<Output=T> + Sub<Output=T> + Mul<Output=T> + Div<Output=T> + PartialOrd + PartialEq + Copy + Debug {}
+trait Value: num::Signed + From<usize> + PartialOrd + Copy + Debug {}
+impl<T> Value for T where T: num::Signed + From<usize> + PartialOrd + Copy + Debug {}
 
-
+/*
 // kmeans data, for accessing 
 trait Data<T> where T: Num {
     fn len(&self) -> usize;
     fn get(&self, index: usize) -> T;
     fn set(&mut self, index: usize, value: T);
     fn calc_mean(total: T, count: usize) -> T;
-}
+}*/
 
 /*
 Data implementation for [f32; 2]
@@ -35,23 +36,23 @@ of either the type or trait in a type->trait relationship.
 `calc_mean()`` is here because of the scalar cast from f32 to usize, which can't be done with a 
 generic type T.
 */
-impl Data<f32> for [f32; 2] {
+/*impl<T> Data<T> for [T; 2] where T: Num {
     fn len(&self) -> usize {
         2
     }
     
-    fn get(&self, index: usize) -> f32 {
+    fn get(&self, index: usize) -> T {
         self[index]
     }
     
-    fn set(&mut self, index: usize, value: f32) {
+    fn set(&mut self, index: usize, value: T) {
         self[index] = value;
     }
     
-    fn calc_mean(total: f32, count: usize) -> f32 {
-        total / count as f32
+    fn calc_mean(total: T, count: usize) -> T {
+        total / T::from(count)
     }
-}
+}*/
 
 /*
 Find the point in the list of means that is closest to the given point and return the index
@@ -59,16 +60,17 @@ of that mean in the means slice.
 */
 fn find_closest<T, U>(point: &T, means: &[T]) -> usize
 where
-    T: Data<U>,
-    U: Num
+    T: IntoIterator<Item=U>,
+    U: Value
 {
     // find the mean that is closest
-    let mut distances = means.iter().map(|&m|{ // TODO: make this part of the data trait? At the very least T will need to be Iterator
-        let d0 = m.get(0) - point.get(0);
-        let d1 = m.get(1) - point.get(1);
-        d0 * d0 + d1 * d1
+    let mut distances = means.iter().map(|&m|{
+        point.into_iter().zip(m.into_iter()).fold(num::Zero::zero(), |total, v| {
+            let delta: U = v.0 - v.1;
+            total + (delta * delta)
+        })
     });
-    let mut min = distances.next().unwrap();
+    let mut min: U = distances.next().unwrap();
     let mut index = 0;
     // TODO: should be able to convert this to a fold or something?
     for v in distances.enumerate() {
@@ -86,8 +88,8 @@ described [here](http://en.wikipedia.org/wiki/K-means_clustering#Standard_algori
 */
 pub fn kmeans<T, U>(data: &[T], k: usize) -> Vec<T>
 where
-    T: Data<U>,
-    U: Num
+    T: IntoIterator<Item=U>,
+    U: Value
 {
     assert!(k > 1); // this algorithm won't work with k < 2 at the moment
     assert!(data.len() > 1); // won't work without at least one data point
@@ -99,21 +101,36 @@ where
     while !converged {
         let mut means_new: Vec<T>;
         {
-            // TODO: put some of this code in the data trait?
             // Assignment step
             let clusters = data.iter().map(|&d|{
                 find_closest(&d, &means)
             }).zip(data);
             // Update step
             let mut means_count: Vec<usize> = vec![0; k];
-            for v in clusters {
+            // TODO: get the totals
+            means_new = (0..k).map(|i| {
+                T means
+            }).collect();
+            // get the counts
+            means_count = (0..k).map(|i| {
+                clusters.filter(|v| v.0 == i).count()
+                //let mut current = clusters.filter(|v| v.0 == i);
+                //clusters.filter(|v| v.0 == i).fold(0, |sum, v| sum + v.1) / T::from(clusters.filter(|v| v.0 == i).count())
+                //clusters.filter(|v| v.0 == i)
+                //    .fold(0, |sum, v| sum.into_iter().zip(v.1.into_iter()).map(|j| j.0 + j.1).collect())
+                //    / U::from(clusters.filter(|v| v.0 == i).count())
+            }).collect();
+            /*for v in clusters {
+                // TODO: calculate total for each dimension of each mean
                 means_new[v.0].set(0, means_new[v.0].get(0) + v.1.get(0));
                 means_new[v.0].set(1, means_new[v.0].get(1) + v.1.get(1));
                 means_count[v.0] += 1;
             }
             means_new = means_new.iter().zip(means_count.iter()).map(|v| {
-                [Data::calc_mean(v.0.get(0), *v.1), Data::calc_mean(v.0.get(1), *v.1)]
-            }).collect();
+                // TODO: average for each mean
+                v.0.iter().map(|x| x / T::from(v.1))
+                //[Data::calc_mean(v.0.get(0), *v.1), Data::calc_mean(v.0.get(1), *v.1)]
+            }).collect();*/
         }
         if means_new.iter().zip(means.iter()).all(|v| {
             v.0.get(0) == v.1.get(0) && v.0.get(1) == v.1.get(1)
