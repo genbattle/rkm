@@ -107,9 +107,15 @@ where
             }).zip(data);
             // Update step
             let mut means_count: Vec<usize> = vec![0; k];
-            // TODO: get the totals
+            // get the totals
             means_new = (0..k).map(|i| {
-                T means
+                let mean: T;
+                for c in clusters.filter(|v| v.0 == i) {
+                    for (m, v) in mean.into_iter().zip(c.1.into_iter()) {
+                        m = m + v;
+                    }
+                }
+                return mean;
             }).collect();
             // get the counts
             means_count = (0..k).map(|i| {
