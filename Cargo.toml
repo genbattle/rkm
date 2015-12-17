@@ -7,4 +7,5 @@ authors = ["Nick Sarten <gen.battle@gmail.com>"]
 csv = "*"
 rand = "*"
 num = "*"
+rendarray = "*"
 

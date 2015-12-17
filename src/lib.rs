@@ -5,160 +5,110 @@ This create contains a simple implementation of the
 
 extern crate rand;
 extern crate num;
+extern crate ndarray;
 
 use std::ops::{Add, Sub, Mul, Div, Index};
 use std::cmp::{PartialOrd, PartialEq};
 use std::fmt::Debug;
 use std::iter::FromIterator;
+use ndarray::{Array, Dimension, Ix};
 
 /*
 Numeric value trait, defines the types that can be used for the value of each dimension in a
 data point.
 */
-pub trait Value: num::Signed + From<usize> + PartialOrd + Copy + Debug {}
-impl<T> Value for T where T: num::Signed + From<usize> + PartialOrd + Copy + Debug {}
+pub trait Value: num::Signed/* + From<usize>*/ + PartialOrd + Copy + Debug {}
+impl<T> Value for T where T: num::Signed/*+ From<usize>*/ + PartialOrd + Copy + Debug {}
 
-/*
-Find the point in the list of means that is closest to the given point and return the index
-of that mean in the means slice.
-*/
-fn find_closest<T, U>(point: &T, means: &[T]) -> usize
-where
-    T: IntoIterator<Item=U> + Clone,
-    U: Value
-{
-    // find the mean that is closest
-    let mut distances = means.iter().map(|m|{
-        point.clone().into_iter().zip(m.clone().into_iter()).fold(num::Zero::zero(), |total, v| {
-            let delta: U = v.0 - v.1;
-            total + (delta * delta)
-        })
-    });
-    let mut min: U = distances.next().unwrap();
-    let mut index = 0;
-    // TODO: should be able to convert this to a fold or something?
-    for v in distances.enumerate() {
-        if v.1 < min {
-            min = v.1;
-            index = v.0 + 1;
-        }
-    }
-    return index;
+fn distance_squared<V: Value>(point_a: &Array<V, Ix>, point_b: &Array<V, Ix>) -> V {
+    point_a.iter().zip(point_b.iter()).fold(num::Zero::zero(), |acc, v| {
+        let delta = *v.0 - *v.1;
+        return acc + (delta * delta);
+    })
 }
 
-/*
-The `kmeans` function provides a simple implementation of the standard k-means algorithm, as
-described [here](http://en.wikipedia.org/wiki/K-means_clustering#Standard_algorithm).
-*/
-pub fn kmeans<T, U>(data: &[T], k: usize) -> Vec<T>
-where
-    T: FromIterator<U> + IntoIterator<Item=U> + Clone,
-    U: Value
-{
-    assert!(k > 1); // this algorithm won't work with k < 2 at the moment
-    assert!(data.len() > 1); // won't work without at least one data point
-    // randomly select initial means from data set
-    let mut rng = rand::thread_rng();
-    let mut means: Vec<T> = rand::sample(&mut rng, data.iter(), k).iter().map(|&v|{v.clone()}).collect();
-    let mut converged = false;
-    // loop until convergence is reached
-    while !converged {
-        let mut means_new: Vec<T>;
-        {
-            // Assignment step
-            let clusters = data.iter().map(|d|{
-                find_closest(d, means.as_slice())
-            }).zip(data);
-            // Update step
-            let mut means_count: Vec<usize> = vec![0; k];
-            // get the totals
-            means_new = (0..k).map(|i| {
-                let mean: T;
-                mean = mean.into_iter().map(|i| num::Zero::zero()).collect();
-                for c in clusters.filter(|v| v.0 == i) {
-                    for (m, v) in mean.into_iter().zip(c.1.into_iter()) {
-                        m = m + v;
-                    }
-                }
-                return mean;
-            }).collect();
-            // get the counts
-            means_count = (0..k).map(|i| {
-                clusters.filter(|v| v.0 == i).count()
-            }).collect();
-            for (m, c) in means_new.iter_mut().zip(means_count.iter()) {
-                for mv in m.into_iter() {
-                    mv = mv / U::from(*c);
-                }
+fn closest_distance<V: Value>(means: &Array<V, (Ix, Ix)>, data: &Array<V, (Ix, Ix)>, k: u32) -> Vec<V> {
+    let mut distances = Vec::with_capacity(k as usize);
+    for i in 0..data.dim().0 {
+        let mut closest = distance_squared(&data.subview(0, i), &means.subview(0, 0));
+        for j in 0..means.dim().0 {
+            let distance = distance_squared(&data.subview(0, i), &means.subview(0, j));
+            if distance < closest {
+                closest = distance;
             }
         }
-        // Check if means are identical to last iteration
-        if means_new.iter().zip(means.iter()).all(|v| {
-            v.0.into_iter().zip(v.1.into_iter()).all(|i| i.0 == i.1)
-        }) {
-            converged = true;
-        } else {
-            means = means_new;
-        }
+        distances.push(closest);
     }
-    return means;
+    return distances;
 }
 
 #[cfg(test)]
 mod tests {
-    extern crate csv;
-    use super::kmeans;
+    extern crate ndarray;
+    // extern crate csv;
+    // use super::kmeans;
+    use ndarray::Array;
     
-    fn read_test_data() -> Vec<[f32; 2]> {
-        let mut data_reader = csv::Reader::from_file("data/iris.data").unwrap();
-        let mut data: Vec<[f32; 2]> = Vec::new();
-        for record in data_reader.decode() {
-            let (sl, _, pl, _, _): (f32, f32, f32, f32, String) = record.unwrap();
-            data.push([sl, pl]);
-        }
-        println!("Read external data:");
-        println!("{:?}", data);
-        return data;
-    }
-
-    /*
-    Test the kmeans method with a basic f32 dataset loaded from a CSV file (in this case iris.data).
-    
-    NOTE: This test just checks that the algorithm runs successfully; I haven't figured out a way
-    to check the validity of the data yet as this dataset has more than one local minima for this
-    algorithm. That doesn't mean one result is wrong, it's just the way the algorithm works.
-    */
     #[test]
-    fn test_kmeans() {
-        let data = read_test_data();
-        let means = kmeans(&data[..], 3);
-        println!("Got means {:?}", means);
-    }
-
-    /*
-    Test that the algorithm panics when k < 2 is given.
-    */
-    #[test]
-    #[should_panic(expected = "assertion failed")]
-    fn test_min_k() {
-        let data = read_test_data();
-        let means = kmeans(&data[..], 1);
-        println!("Got means {:?}", means);
-        // Should panic at this point
-        println!("test_min_k failed, should have panicked");
+    fn test_distance() {
+        use super::distance_squared;
+        let a = Array::from_vec(vec![1.0f32, 1.0f32]);
+        let b = Array::from_vec(vec![2.0f32, 2.0f32]);
+        let c = Array::from_vec(vec![1200.0f32, 1200.0f32]);
+        assert_eq!(distance_squared(&a, &b), 2.0f32);
+        assert_eq!(distance_squared(&a, &c), 2875202.0f32);
     }
     
-    /*
-    Test that the algorithm panics when no data is provided.
-    TODO: improve this behaviour?
-    */
-    #[test]
-    #[should_panic(expected = "assertion failed")]
-    fn test_min_data() {
-        let data: Vec<[f32; 2]> = Vec::new();
-        let means = kmeans(&data, 3);
-        println!("Got means {:?}", means);
-        // Should panic at this point
-        println!("test_min_data failed, should have panicked");
-    }
+    // fn read_test_data() -> Vec<[f32; 2]> {
+    //     let mut data_reader = csv::Reader::from_file("data/iris.data").unwrap();
+    //     let mut data: Vec<[f32; 2]> = Vec::new();
+    //     for record in data_reader.decode() {
+    //         let (sl, _, pl, _, _): (f32, f32, f32, f32, String) = record.unwrap();
+    //         data.push([sl, pl]);
+    //     }
+    //     println!("Read external data:");
+    //     println!("{:?}", data);
+    //     return data;
+    // }
+    // 
+    // /*
+    // Test the kmeans method with a basic f32 dataset loaded from a CSV file (in this case iris.data).
+    // 
+    // NOTE: This test just checks that the algorithm runs successfully; I haven't figured out a way
+    // to check the validity of the data yet as this dataset has more than one local minima for this
+    // algorithm. That doesn't mean one result is wrong, it's just the way the algorithm works.
+    // */
+    // #[test]
+    // fn test_kmeans() {
+    //     let data = read_test_data();
+    //     let means = kmeans(&data[..], 3);
+    //     println!("Got means {:?}", means);
+    // }
+    // 
+    // /*
+    // Test that the algorithm panics when k < 2 is given.
+    // */
+    // #[test]
+    // #[should_panic(expected = "assertion failed")]
+    // fn test_min_k() {
+    //     let data = read_test_data();
+    //     let means = kmeans(&data[..], 1);
+    //     println!("Got means {:?}", means);
+    //     // Should panic at this point
+    //     println!("test_min_k failed, should have panicked");
+    // }
+    // 
+    // /*
+    // Test that the algorithm panics when no data is provided.
+    // TODO: improve this behaviour?
+    // */
+    // #[test]
+    // #[should_panic(expected = "assertion failed")]
+    // fn test_min_data() {
+    //     let data: Vec<[f32; 2]> = Vec::new();
+    //     let means = kmeans(&data, 3);
+    //     println!("Got means {:?}", means);
+    //     // Should panic at this point
+    //     println!("test_min_data failed, should have panicked");
+    // }
 }
