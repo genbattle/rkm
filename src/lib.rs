@@ -11,7 +11,7 @@ use std::ops::{Add, Sub, Mul, Div, Index};
 use std::cmp::{PartialOrd, PartialEq};
 use std::fmt::Debug;
 use std::iter::FromIterator;
-use ndarray::{Array1, Array2, arr1, arr2};
+use ndarray::{Array1, Array2, ArrayView1, ArrayView2, arr1, arr2};
 use rand::Rng;
 use rand::distributions::{Weighted, WeightedChoice};
 
@@ -25,32 +25,31 @@ impl<T> Value for T where T: num::Signed/*+ From<usize>*/ + PartialOrd + Copy + 
 /*
 Find the distance between two data points, given as Array rows.
 */
-fn distance_squared<V: Value>(point_a: &Array1<V>, point_b: &Array1<V>) -> V {
+fn distance_squared<V: Value>(point_a: &ArrayView1<V>, point_b: &ArrayView1<V>) -> V {
     point_a.iter().zip(point_b.iter()).fold(num::Zero::zero(), |acc, v| {
         let delta = *v.0 - *v.1;
         return acc + (delta * delta);
     })
 }
 
-// /*
-// Find the shortest distance between each data point and any of a set of mean points.
-// TODO: This will be used for km++ initialization
-// TODO: This will need to return rand::distributions::Weighted in order to work
-// */
-// fn closest_distance<V: Value>(means: &Array2<V>, data: &Array2<V>, k: u32) -> Vec<V> {
-//     let mut distances = Vec::with_capacity(k as usize);
-//     for i in 0..data.dim().0 {
-//         let mut closest = distance_squared(&data.subview(0, i), &means.subview(0, 0));
-//         for j in 0..means.dim().0 {
-//             let distance = distance_squared(&data.subview(0, i), &means.subview(0, j));
-//             if distance < closest {
-//                 closest = distance;
-//             }
-//         }
-//         distances.push(closest);
-//     }
-//     return distances;
-// }
+/*
+Find the shortest distance between each data point and any of a set of mean points.
+TODO: This will be used for km++ initialization
+*/
+fn closest_distance<V: Value>(means: &Array2<V>, data: &Array2<V>, k: u32) -> Vec<V> {
+    let mut distances = Vec::with_capacity(k as usize);
+    for d in data.outer_iter() {
+        let mut closest = distance_squared(&d, &means.outer_iter().next().unwrap());
+        for m in means.outer_iter() {
+            let distance = distance_squared(&d, &m);
+            if distance < closest {
+                closest = distance;
+            }
+        }
+        distances.push(closest);
+    }
+    return distances;
+}
 
 // // TODO: kmeans++ initialization
 // /*
@@ -105,9 +104,31 @@ mod tests {
         let c = arr1(&[1200.0f32, 1200.0f32]);
         let d = arr1(&[1, 1]);
         let e = arr1(&[1200, 1200]);
-        assert_eq!(distance_squared(&a, &b), 2.0f32);
-        assert_eq!(distance_squared(&a, &c), 2875202.0f32);
-        assert_eq!(distance_squared(&d, &e), 2875202);
+        assert_eq!(distance_squared(&a.view(), &b.view()), 2.0f32);
+        assert_eq!(distance_squared(&a.view(), &c.view()), 2875202.0f32);
+        assert_eq!(distance_squared(&d.view(), &e.view()), 2875202);
+    }
+
+    #[test]
+    fn test_closest_distances() {
+        use ndarray::arr2;
+        use super::closest_distance;
+        let a = arr2(&[
+            [1, 1],
+            [2, 2],
+            [100, 4],
+            [3, 100],
+            [7, 88],
+            [70, 20],
+            [22, 12],
+        ]);
+
+        let m = arr2(&[
+            [0, 0],
+            [100, 0],
+            [0, 100],
+        ]);
+        assert_eq!(closest_distance(&m, &a, m.len() as u32), vec![2, 8, 16, 9, 193, 1300, 628]);
     }
     
     // fn read_test_data() -> Vec<[f32; 2]> {
