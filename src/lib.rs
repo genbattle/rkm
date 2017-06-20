@@ -5,6 +5,7 @@ This create contains a simple implementation of the
 
 extern crate rand;
 extern crate num;
+#[macro_use(s)]
 extern crate ndarray;
 
 use std::ops::{Add, Sub, Mul, Div, Index};
@@ -13,14 +14,15 @@ use std::fmt::Debug;
 use std::iter::FromIterator;
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2, arr1, arr2};
 use rand::Rng;
-use rand::distributions::{Weighted, WeightedChoice};
+use rand::distributions::{Weighted, WeightedChoice, Sample};
+use num::{cast, NumCast};
 
 /*
 Numeric value trait, defines the types that can be used for the value of each dimension in a
 data point.
 */
-pub trait Value: num::Signed/* + From<usize>*/ + PartialOrd + Copy + Debug {}
-impl<T> Value for T where T: num::Signed/*+ From<usize>*/ + PartialOrd + Copy + Debug {}
+pub trait Value: num::Signed + NumCast + PartialOrd + Copy + Debug {}
+impl<T> Value for T where T: num::Signed + NumCast + PartialOrd + Copy + Debug {}
 
 /*
 Find the distance between two data points, given as Array rows.
@@ -34,9 +36,8 @@ fn distance_squared<V: Value>(point_a: &ArrayView1<V>, point_b: &ArrayView1<V>) 
 
 /*
 Find the shortest distance between each data point and any of a set of mean points.
-TODO: This will be used for km++ initialization
 */
-fn closest_distance<V: Value>(means: &Array2<V>, data: &Array2<V>, k: u32) -> Vec<V> {
+fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>, k: u32) -> Vec<V> {
     let mut distances = Vec::with_capacity(k as usize);
     for d in data.outer_iter() {
         let mut closest = distance_squared(&d, &means.outer_iter().next().unwrap());
@@ -51,27 +52,38 @@ fn closest_distance<V: Value>(means: &Array2<V>, data: &Array2<V>, k: u32) -> Ve
     return distances;
 }
 
-// // TODO: kmeans++ initialization
-// /*
-// This is a mean initialization method based on the [kmeans++](https://en.wikipedia.org/wiki/K-means%2B%2B)
-// initialization algorithm.
-// */
-// fn initialize_plusplus<V: Value>(data: &Array2<V>, k: u32) -> Array2<V> {
-//     assert!(k > 0);
-//     let mut means = Array::<V, (Ix, Ix)>::zeros((k, data.dim().1));
-//     let mut rng = rand::thread_rng();
-//     let data_len = data.dim().0;
-//     means.subview(0, 0).assign(&data.subview(0, rng.gen_range(0, data_len)));
-//     for i in 1..data_len {
-// 		// Calculate the distance to the closest mean for each data point
-//         let distances = closest_distance(&means.slice(&[Si(0, Some(i as i32), 1), S]), data, k);
-// 		// Pick a random point weighted by the distance from existing means
-//         let weights = distances.iter().zip(0..data_len).map(|d|{
-//             Weighted{weight: *d.0, item: d.1}
-//         }).collect();
-//     }
-//     return means;
-// }
+/*
+This is a mean initialization method based on the [kmeans++](https://en.wikipedia.org/wiki/K-means%2B%2B)
+initialization algorithm.
+*/
+fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: u32) -> Array2<V> {
+    assert!(k > 0);
+    let mut means = Array2::zeros((k as usize, data.shape()[1]));
+    let mut rng = rand::thread_rng();
+    let data_len = data.shape()[0];
+    let chosen = rng.gen_range(0, data_len) as isize;
+    means.slice_mut(s![0..1, ..]).assign(&data.slice(s![chosen..(chosen + 1), ..]));
+    for i in 1..k as isize {
+		// Calculate the distance to the closest mean for each data point
+        let distances = closest_distance(&means.slice(s![0..i, ..]).view(), &data.view(), k);
+        // Find the largest distance to normalize the weights against
+        let max_distance = distances.iter().fold(distances.iter().next().unwrap(), |mx, d|{
+            if d > mx {
+                d
+            } else {
+                mx
+            }
+        });
+		// Pick a random point weighted by the distance from existing means
+        let mut weights: Vec<Weighted<usize>> = distances.iter().zip(0..data_len).map(|d|{
+            Weighted{weight: (std::u32::MAX / num::cast::<V, u32>(*max_distance).unwrap()) * num::cast::<V, u32>(*d.0).unwrap(), item: d.1}
+        }).collect();
+        let mut chooser = WeightedChoice::new(&mut weights);
+        let chosen = chooser.sample(&mut rng) as isize;
+        means.slice_mut(s![i..(i + 1), ..]).assign(&data.slice(s![chosen..(chosen + 1), ..]));
+    }
+    means
+}
 
 // /*
 // Find the closest mean to a particular data point.
@@ -128,7 +140,7 @@ mod tests {
             [100, 0],
             [0, 100],
         ]);
-        assert_eq!(closest_distance(&m, &a, m.len() as u32), vec![2, 8, 16, 9, 193, 1300, 628]);
+        assert_eq!(closest_distance(&m.view(), &a.view(), m.len() as u32), vec![2, 8, 16, 9, 193, 1300, 628]);
     }
     
     // fn read_test_data() -> Vec<[f32; 2]> {
