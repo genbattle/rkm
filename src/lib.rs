@@ -12,7 +12,7 @@ use std::ops::{Add, Sub, Mul, Div, Index};
 use std::cmp::{PartialOrd, PartialEq};
 use std::fmt::Debug;
 use std::iter::FromIterator;
-use ndarray::{Array1, Array2, ArrayView1, ArrayView2, arr1, arr2};
+use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Ix};
 use rand::Rng;
 use rand::distributions::{Weighted, WeightedChoice, Sample};
 use num::{cast, NumCast};
@@ -85,22 +85,26 @@ fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: u32) -> Array2<V> {
     means
 }
 
-// /*
-// Find the closest mean to a particular data point.
-// */
-// fn closest_mean<V: Value>(point: &ArrayView1<V>, means: &ArrayView2<V>) -> Ix {
-//     // TODO: Check dimensionality/size of means and point
-//     let mut shortest_distance = distance_squared(point, &means.subview(0, 0));
-//     let mut index: Ix = 0;
-//     for i in 0..means.dim().0 {
-//         let distance = distance_squared(point, &means.subview(0, i));
-//         if distance < shortest_distance {
-//             shortest_distance = distance;
-//             index = i;
-//         }
-//     }
-//     return index;
-// }
+/*
+Find the closest mean to a particular data point.
+*/
+fn closest_mean<V: Value>(point: &ArrayView1<V>, means: &ArrayView2<V>) -> Ix {
+    assert!(means.dim().0 > 0);
+    let mut iter = means.outer_iter().enumerate();
+    if let Some(compare) = iter.next() {
+        let mut index = compare.0;
+        let mut shortest_distance = distance_squared(point, &compare.1);
+        for compare in iter {
+            let distance = distance_squared(point, &compare.1);
+            if distance < shortest_distance {
+                shortest_distance = distance;
+                index = compare.0;
+            }
+        }
+        return index;
+    }
+    return 0; // Should never hit this due to the assertion of the precondition
+}
 
 #[cfg(test)]
 mod tests {
@@ -141,6 +145,33 @@ mod tests {
             [0, 100],
         ]);
         assert_eq!(closest_distance(&m.view(), &a.view(), m.len() as u32), vec![2, 8, 16, 9, 193, 1300, 628]);
+    }
+
+    #[test]
+    fn test_closest_mean() {
+        use ndarray::{arr1, arr2};
+        use super::closest_mean;
+        {
+            let p = arr1(&[2, -1]);
+            let m = arr2(&[
+                [1, 1],
+                [5, 100],
+                [44, 65],
+                [-5,-6]
+            ]);
+            assert_eq!(closest_mean(&p.view(), &m.view()), 0);
+        }
+
+        {
+            let p = arr1(&[1024, 768]);
+            let m = arr2(&[
+                [1, 1],
+                [5, 100],
+                [512, 768],
+                [-5,-6]
+            ]);
+            assert_eq!(closest_mean(&p.view(), &m.view()), 2);
+        }
     }
     
     // fn read_test_data() -> Vec<[f32; 2]> {
