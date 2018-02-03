@@ -12,7 +12,7 @@ use std::ops::{Add, Sub, Mul, Div, Index};
 use std::cmp::{PartialOrd, PartialEq};
 use std::fmt::Debug;
 use std::iter::FromIterator;
-use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Ix};
+use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Ix, Axis};
 use rand::Rng;
 use rand::distributions::{Weighted, WeightedChoice, Sample};
 use num::{cast, NumCast};
@@ -21,8 +21,8 @@ use num::{cast, NumCast};
 Numeric value trait, defines the types that can be used for the value of each dimension in a
 data point.
 */
-pub trait Value: num::Signed + NumCast + PartialOrd + Copy + Debug {}
-impl<T> Value for T where T: num::Signed + NumCast + PartialOrd + Copy + Debug {}
+pub trait Value: Add + num::Signed + NumCast + PartialOrd + Copy + Debug {}
+impl<T> Value for T where T: Add + num::Signed + NumCast + PartialOrd + Copy + Debug {}
 
 /*
 Find the distance between two data points, given as Array rows.
@@ -106,6 +106,34 @@ fn closest_mean<V: Value>(point: &ArrayView1<V>, means: &ArrayView2<V>) -> Ix {
     return 0; // Should never hit this due to the assertion of the precondition
 }
 
+/*
+Calculate the index of the mean each data point is closest to (euclidean distance).
+*/
+fn calculate_clusters<V: Value>(data: &ArrayView2<V>, means: &ArrayView2<V>) -> Vec<Ix> {
+    data.outer_iter()
+    .map(|point|{
+        closest_mean(&point.view(), means)
+    })
+    .collect()
+}
+
+/*
+Calculate means based on data points and their cluster assignments.
+*/
+fn calculate_means<V: Value>(data: &ArrayView2<V>, clusters: &Vec<Ix>, old_means: &ArrayView2<V>, k: usize) {
+    // TODO: replace old_means parameter with just its dimension, or eliminate it completely; that's all we need
+    let (means, count) = clusters.iter()
+        .zip(data.outer_iter())
+        .fold((Array2::zeros(old_means.dim()), vec![0; k]), |mut meancount, point|{
+            meancount.1[*point.0] += 1;
+            {
+                let total = meancount.0.subview_mut(Axis(0), *point.0);
+                total + &point.1;
+            }
+            meancount
+        });
+}
+
 #[cfg(test)]
 mod tests {
     // extern crate csv;
@@ -171,6 +199,29 @@ mod tests {
                 [-5,-6]
             ]);
             assert_eq!(closest_mean(&p.view(), &m.view()), 2);
+        }
+    }
+
+    #[test]
+    fn test_calculate_means() {
+        use ndarray::{arr1, arr2};
+        use super::calculate_means;
+        {
+            let d = arr2(&[
+                [1, 1],
+                [5, 100],
+                [512, 768],
+                [-5,-6]
+            ]); 
+            let c = vec![0, 1, 2, 3];
+            let m = arr2(&[
+                [0, 0],
+                [0, 0],
+                [0, 0],
+                [0, 0]
+            ]);
+            calculate_means(&d.view(), &c, &m.view(), 4);
+            assert!(false);
         }
     }
     
