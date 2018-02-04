@@ -37,8 +37,8 @@ fn distance_squared<V: Value>(point_a: &ArrayView1<V>, point_b: &ArrayView1<V>) 
 /*
 Find the shortest distance between each data point and any of a set of mean points.
 */
-fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>, k: u32) -> Vec<V> {
-    let mut distances = Vec::with_capacity(k as usize);
+fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>, k: usize) -> Vec<V> {
+    let mut distances = Vec::with_capacity(k);
     for d in data.outer_iter() {
         let mut closest = distance_squared(&d, &means.outer_iter().next().unwrap());
         for m in means.outer_iter() {
@@ -56,7 +56,7 @@ fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>, k: u3
 This is a mean initialization method based on the [kmeans++](https://en.wikipedia.org/wiki/K-means%2B%2B)
 initialization algorithm.
 */
-fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: u32) -> Array2<V> {
+fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize) -> Array2<V> {
     assert!(k > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
     let mut rng = rand::thread_rng();
@@ -140,10 +140,28 @@ fn calculate_means<V: Value>(data: &ArrayView2<V>, clusters: &Vec<Ix>, old_means
     means
 }
 
+pub fn kmeans_lloyd<V: Value>(data: &ArrayView2<V>, k: usize) -> (Array2<V>, Vec<usize>) {
+    assert!(k > 1);
+    assert!(data.dim().0 >= k);
+
+    let mut old_means = initialize_plusplus(data, k);
+    let mut clusters = calculate_clusters(data, &old_means.view());
+    let mut means = calculate_means(data, &clusters, &old_means.view(), k);
+
+    while means != old_means {
+        clusters = calculate_clusters(data, &means.view());
+        old_means = means;
+        means = calculate_means(data, &clusters, &old_means.view(), k);
+    }
+
+    (means, clusters)
+}
+
 #[cfg(test)]
 mod tests {
-    // extern crate csv;
-    // use super::kmeans;
+    extern crate csv;
+    use super::kmeans_lloyd;
+    use ndarray::Array2;
     
     #[test]
     fn test_distance() {
@@ -178,7 +196,7 @@ mod tests {
             [100, 0],
             [0, 100],
         ]);
-        assert_eq!(closest_distance(&m.view(), &a.view(), m.len() as u32), vec![2, 8, 16, 9, 193, 1300, 628]);
+        assert_eq!(closest_distance(&m.view(), &a.view(), m.len()), vec![2, 8, 16, 9, 193, 1300, 628]);
     }
 
     #[test]
@@ -240,32 +258,34 @@ mod tests {
         }
     }
     
-    // fn read_test_data() -> Vec<[f32; 2]> {
-    //     let mut data_reader = csv::Reader::from_file("data/iris.data").unwrap();
-    //     let mut data: Vec<[f32; 2]> = Vec::new();
-    //     for record in data_reader.decode() {
-    //         let (sl, _, pl, _, _): (f32, f32, f32, f32, String) = record.unwrap();
-    //         data.push([sl, pl]);
-    //     }
-    //     println!("Read external data:");
-    //     println!("{:?}", data);
-    //     return data;
-    // }
-    // 
-    // /*
-    // Test the kmeans method with a basic f32 dataset loaded from a CSV file (in this case iris.data).
-    // 
-    // NOTE: This test just checks that the algorithm runs successfully; I haven't figured out a way
-    // to check the validity of the data yet as this dataset has more than one local minima for this
-    // algorithm. That doesn't mean one result is wrong, it's just the way the algorithm works.
-    // */
-    // #[test]
-    // fn test_kmeans() {
-    //     let data = read_test_data();
-    //     let means = kmeans(&data[..], 3);
-    //     println!("Got means {:?}", means);
-    // }
-    // 
+    fn read_test_data() -> Array2<f32> {
+        let mut data_reader = csv::Reader::from_file("data/iris.data").unwrap();
+        let mut data: Vec<f32> = Vec::new();
+        for record in data_reader.decode() {
+            let (sl, _, pl, _, _): (f32, f32, f32, f32, String) = record.unwrap();
+            data.push(sl);
+            data.push(pl);
+        }
+        println!("Read external data:");
+        println!("{:?}", data);
+        Array2::from_shape_vec((data.len() / 2, 2), data).unwrap()
+    }
+    
+    /*
+    Test the kmeans method with a basic f32 dataset loaded from a CSV file (in this case iris.data).
+    
+    NOTE: This test just checks that the algorithm runs successfully; I haven't figured out a way
+    to check the validity of the data yet as this dataset has more than one local minima for this
+    algorithm. That doesn't mean one result is wrong, it's just the way the algorithm works.
+    */
+    #[test]
+    fn test_kmeans() {
+        let data = read_test_data();
+        let (means, clusters) = kmeans_lloyd(&data.view(), 3);
+        println!("Got means {:?}", means);
+        println!("Got clusters {:?}", clusters);
+    }
+    
     // /*
     // Test that the algorithm panics when k < 2 is given.
     // */
@@ -278,7 +298,7 @@ mod tests {
     //     // Should panic at this point
     //     println!("test_min_k failed, should have panicked");
     // }
-    // 
+    
     // /*
     // Test that the algorithm panics when no data is provided.
     // TODO: improve this behaviour?
