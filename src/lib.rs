@@ -1,5 +1,5 @@
 /*
-This create contains a simple implementation of the 
+This crate contains a simple implementation of the 
 [k-means clustering algorithm](http://en.wikipedia.org/wiki/K-means_clustering).
 */
 
@@ -8,14 +8,14 @@ extern crate num;
 #[macro_use(s)]
 extern crate ndarray;
 
-use std::ops::{Add, Sub, Mul, Div, Index};
+use std::ops::Add;
 use std::cmp::{PartialOrd, PartialEq};
 use std::fmt::Debug;
 use std::iter::FromIterator;
 use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Ix, Axis, ScalarOperand};
 use rand::Rng;
 use rand::distributions::{Weighted, WeightedChoice, Sample};
-use num::{cast, NumCast, Zero, Signed};
+use num::{cast, NumCast, Zero, One, Signed};
 
 /*
 Numeric value trait, defines the types that can be used for the value of each dimension in a
@@ -124,19 +124,21 @@ fn calculate_means<V: Value>(data: &ArrayView2<V>, clusters: &Vec<Ix>, old_means
     // TODO: replace old_means parameter with just its dimension, or eliminate it completely; that's all we need
     let (means, _) = clusters.iter()
         .zip(data.outer_iter())
-        .fold((Array2::zeros(old_means.dim()), vec![1; k]), |mut cumulative_means, point|{
+        .fold((Array2::zeros(old_means.dim()), vec![0; k]), |mut cumulative_means, point|{
             {
-                let total = cumulative_means.0.subview_mut(Axis(0), *point.0);
-                let partial_mean = &point.1 * V::from(cumulative_means.1[*point.0]).unwrap();
-                total + &partial_mean;
+                let mut mean = cumulative_means.0.subview_mut(Axis(0), *point.0);
+                let n = V::from(cumulative_means.1[*point.0]).unwrap();
+                let step1 = &mean * n;
+                let step2 = &step1 + &point.1;
+                let step3 = &step2 / (n + V::one());
+                mean.assign(&step3);
+                // TODO: file a bug about how + and += work with ndarray
             }
             cumulative_means.1[*point.0] += 1;
             cumulative_means
         });
     means
 }
-
-// fn kmeans_lloyd<V: Value>(data: &ArrayView2<V>, k: usize)
 
 #[cfg(test)]
 mod tests {
@@ -208,25 +210,33 @@ mod tests {
 
     #[test]
     fn test_calculate_means() {
-        use ndarray::{arr1, arr2};
+        use ndarray::arr2;
         use super::calculate_means;
         {
             let d = arr2(&[
-                [1, 1],
-                [5, 100],
-                [512, 768],
-                [-5,-6]
+                [0.0f32, 0.0f32],
+                [2.0f32, 2.0f32],
+                [4.0f32, 5.0f32],
+                [5.0f32, 100.0f32],
+                [128.0f32, 300.0f32],
+                [512.0f32, 768.0f32],
+                [-5.0f32, -6.0f32],
+                [5.0f32, 6.0f32]
             ]); 
-            let c = vec![0, 1, 2, 3];
+            let c = vec![0, 0, 1, 1, 2, 2, 3, 3];
             let m = arr2(&[
-                [0, 0],
-                [0, 0],
-                [0, 0],
-                [0, 0]
+                [0.0f32, 0.0f32],
+                [0.0f32, 0.0f32],
+                [0.0f32, 0.0f32],
+                [0.0f32, 0.0f32]
             ]);
-            let means = calculate_means(&d.view(), &c, &m.view(), 4);
-            println!("{:?}", means);
-            assert!(false);
+            let expected_means = arr2(&[
+                [1.0f32, 1.0f32],
+                [4.50f32, 52.5f32],
+                [320.0f32, 534.0f32],
+                [0.0f32, 0.0f32]
+            ]);
+            assert_eq!(calculate_means(&d.view(), &c, &m.view(), 4), expected_means);
         }
     }
     
