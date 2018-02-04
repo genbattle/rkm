@@ -12,17 +12,17 @@ use std::ops::{Add, Sub, Mul, Div, Index};
 use std::cmp::{PartialOrd, PartialEq};
 use std::fmt::Debug;
 use std::iter::FromIterator;
-use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Ix, Axis};
+use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Ix, Axis, ScalarOperand};
 use rand::Rng;
 use rand::distributions::{Weighted, WeightedChoice, Sample};
-use num::{cast, NumCast};
+use num::{cast, NumCast, Zero, Signed};
 
 /*
 Numeric value trait, defines the types that can be used for the value of each dimension in a
 data point.
 */
-pub trait Value: Add + num::Signed + NumCast + PartialOrd + Copy + Debug {}
-impl<T> Value for T where T: Add + num::Signed + NumCast + PartialOrd + Copy + Debug {}
+pub trait Value: ScalarOperand + Add + Zero + Signed + NumCast + PartialOrd + Copy + Debug {}
+impl<T> Value for T where T: ScalarOperand + Add + Zero + Signed + NumCast + PartialOrd + Copy + Debug {}
 
 /*
 Find the distance between two data points, given as Array rows.
@@ -120,19 +120,23 @@ fn calculate_clusters<V: Value>(data: &ArrayView2<V>, means: &ArrayView2<V>) -> 
 /*
 Calculate means based on data points and their cluster assignments.
 */
-fn calculate_means<V: Value>(data: &ArrayView2<V>, clusters: &Vec<Ix>, old_means: &ArrayView2<V>, k: usize) {
+fn calculate_means<V: Value>(data: &ArrayView2<V>, clusters: &Vec<Ix>, old_means: &ArrayView2<V>, k: usize) -> Array2<V> {
     // TODO: replace old_means parameter with just its dimension, or eliminate it completely; that's all we need
-    let (means, count) = clusters.iter()
+    let (means, _) = clusters.iter()
         .zip(data.outer_iter())
-        .fold((Array2::zeros(old_means.dim()), vec![0; k]), |mut meancount, point|{
-            meancount.1[*point.0] += 1;
+        .fold((Array2::zeros(old_means.dim()), vec![1; k]), |mut cumulative_means, point|{
             {
-                let total = meancount.0.subview_mut(Axis(0), *point.0);
-                total + &point.1;
+                let total = cumulative_means.0.subview_mut(Axis(0), *point.0);
+                let partial_mean = &point.1 * V::from(cumulative_means.1[*point.0]).unwrap();
+                total + &partial_mean;
             }
-            meancount
+            cumulative_means.1[*point.0] += 1;
+            cumulative_means
         });
+    means
 }
+
+// fn kmeans_lloyd<V: Value>(data: &ArrayView2<V>, k: usize)
 
 #[cfg(test)]
 mod tests {
@@ -220,7 +224,8 @@ mod tests {
                 [0, 0],
                 [0, 0]
             ]);
-            calculate_means(&d.view(), &c, &m.view(), 4);
+            let means = calculate_means(&d.view(), &c, &m.view(), 4);
+            println!("{:?}", means);
             assert!(false);
         }
     }
