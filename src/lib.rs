@@ -79,8 +79,11 @@ fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize) -> Array2<V> {
 		// Pick a random point weighted by the distance from existing means
         // TODO: sort out the problem here with the weighted choice generator: weights must add to less than u32::MAX.
         //   The C++ implementation doesn't have this limitation.
-        let mut weights: Vec<Weighted<usize>> = distances.iter().zip(0..data_len).map(|d|{
-            Weighted{weight: ((num::cast::<V, f32>(*d.0).unwrap() / num::cast::<V, f32>(*max_distance).unwrap()) * ((std::u32::MAX / data_len as u32) as f32)) as u32, item: d.1}
+        let distance_sum: f64 = distances.iter().fold(0.0f64, |sum, d|{
+            sum + num::cast::<V, f64>(*d).unwrap()
+        });
+        let mut weights: Vec<Weighted<usize>> = distances.iter().zip(0..data_len).map(|p|{
+            Weighted{weight: ((num::cast::<V, f64>(*p.0).unwrap() / distance_sum) * ((std::u32::MAX) as f64)).floor() as u32, item: p.1}
         }).collect();
         let mut chooser = WeightedChoice::new(&mut weights);
         let chosen = chooser.sample(&mut rng) as isize;
