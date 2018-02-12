@@ -57,11 +57,13 @@ This is a mean initialization method based on the [kmeans++](https://en.wikipedi
 initialization algorithm.
 */
 fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize) -> Array2<V> {
-    assert!(k > 0);
+    assert!(k > 1);
+    assert!(data.dim().0 > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
     let mut rng = rand::thread_rng();
     let data_len = data.shape()[0];
     let chosen = rng.gen_range(0, data_len) as isize;
+    // means.subview_mut(Axis(0), 0).assign()
     means.slice_mut(s![0..1, ..]).assign(&data.slice(s![chosen..(chosen + 1), ..]));
     for i in 1..k as isize {
 		// Calculate the distance to the closest mean for each data point
@@ -75,8 +77,10 @@ fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize) -> Array2<V> {
             }
         });
 		// Pick a random point weighted by the distance from existing means
+        // TODO: sort out the problem here with the weighted choice generator: weights must add to less than u32::MAX.
+        //   The C++ implementation doesn't have this limitation.
         let mut weights: Vec<Weighted<usize>> = distances.iter().zip(0..data_len).map(|d|{
-            Weighted{weight: (std::u32::MAX / num::cast::<V, u32>(*max_distance).unwrap()) * num::cast::<V, u32>(*d.0).unwrap(), item: d.1}
+            Weighted{weight: ((num::cast::<V, f32>(*d.0).unwrap() / num::cast::<V, f32>(*max_distance).unwrap()) * ((std::u32::MAX / data_len as u32) as f32)) as u32, item: d.1}
         }).collect();
         let mut chooser = WeightedChoice::new(&mut weights);
         let chosen = chooser.sample(&mut rng) as isize;
