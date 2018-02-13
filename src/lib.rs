@@ -166,7 +166,6 @@ pub fn kmeans_lloyd<V: Value>(data: &ArrayView2<V>, k: usize) -> (Array2<V>, Vec
 
 #[cfg(test)]
 mod tests {
-    extern crate csv;
     use super::kmeans_lloyd;
     use ndarray::Array2;
     
@@ -264,33 +263,20 @@ mod tests {
             assert_eq!(calculate_means(&d.view(), &c, &m.view(), 4), expected_means);
         }
     }
-    
-    fn read_test_data() -> Array2<f32> {
-        let mut data_reader = csv::Reader::from_file("data/iris.data").unwrap();
-        let mut data: Vec<f32> = Vec::new();
-        for record in data_reader.decode() {
-            let (sl, _, pl, _, _): (f32, f32, f32, f32, String) = record.unwrap();
-            data.push(sl);
-            data.push(pl);
-        }
-        println!("Read external data:");
-        println!("{:?}", data);
-        Array2::from_shape_vec((data.len() / 2, 2), data).unwrap()
-    }
-    
-    /*
-    Test the kmeans method with a basic f32 dataset loaded from a CSV file (in this case iris.data).
-    
-    NOTE: This test just checks that the algorithm runs successfully; I haven't figured out a way
-    to check the validity of the data yet as this dataset has more than one local minima for this
-    algorithm. That doesn't mean one result is wrong, it's just the way the algorithm works.
-    */
+
     #[test]
-    fn test_kmeans() {
-        let data = read_test_data();
-        let (means, clusters) = kmeans_lloyd(&data.view(), 3);
-        println!("Got means {:?}", means);
-        println!("Got clusters {:?}", clusters);
+    #[should_panic(expected = "assertion failed")]
+    fn test_min_k() {
+        use ndarray::arr2;
+        use super::calculate_means;
+        {
+            let d = arr2(&[
+                [1.0f32, 1.0f32],
+                [2.0f32, 2.0f32],
+                [3.0f32, 3.0f32]
+            ]); 
+            kmeans_lloyd(&d.view(), 1);
+        }
     }
     
     // /*
