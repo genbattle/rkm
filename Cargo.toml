@@ -2,7 +2,6 @@
 name = "rkm"
 version = "0.3.0"
 authors = ["Nick Sarten <gen.battle@gmail.com>"]
-exclude = ["data/iris.data", "src/example.rs"]
 description = "A generic k-means implementation"
 repository = "https://github.com/genbattle/rkm"
 readme = "README.md"
