@@ -1,12 +1,12 @@
 [package]
 name = "rkm"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Nick Sarten <gen.battle@gmail.com>"]
 
 [dependencies]
 csv = "0.15.0"
-rand = "0.3.15"
-num = "0.1.37"
+rand = "0.4.2"
+num = "0.1.42"
 ndarray = "0.9.1"
 
 [lib]

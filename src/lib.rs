@@ -278,31 +278,4 @@ mod tests {
             kmeans_lloyd(&d.view(), 1);
         }
     }
-    
-    // /*
-    // Test that the algorithm panics when k < 2 is given.
-    // */
-    // #[test]
-    // #[should_panic(expected = "assertion failed")]
-    // fn test_min_k() {
-    //     let data = read_test_data();
-    //     let means = kmeans(&data[..], 1);
-    //     println!("Got means {:?}", means);
-    //     // Should panic at this point
-    //     println!("test_min_k failed, should have panicked");
-    // }
-    
-    // /*
-    // Test that the algorithm panics when no data is provided.
-    // TODO: improve this behaviour?
-    // */
-    // #[test]
-    // #[should_panic(expected = "assertion failed")]
-    // fn test_min_data() {
-    //     let data: Vec<[f32; 2]> = Vec::new();
-    //     let means = kmeans(&data, 3);
-    //     println!("Got means {:?}", means);
-    //     // Should panic at this point
-    //     println!("test_min_data failed, should have panicked");
-    // }
 }
