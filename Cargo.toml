@@ -7,7 +7,7 @@ repository = "https://github.com/genbattle/rkm"
 readme = "README.md"
 license = "MIT"
 license-file = "LICENSE.md"
-keywords = ["kmeans", "k", "means", "cluster", "clustering"]
+keywords = ["kmeans", "k-means", "means", "cluster", "clustering"]
 categories = ["algorithms", "science"]
 
 [dependencies]
