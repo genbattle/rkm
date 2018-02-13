@@ -9,13 +9,12 @@ extern crate num;
 extern crate ndarray;
 
 use std::ops::Add;
-use std::cmp::{PartialOrd, PartialEq};
+use std::cmp::PartialOrd;
 use std::fmt::Debug;
-use std::iter::FromIterator;
-use ndarray::{Array1, Array2, ArrayView1, ArrayView2, Ix, Axis, ScalarOperand};
+use ndarray::{Array2, ArrayView1, ArrayView2, Ix, Axis, ScalarOperand};
 use rand::Rng;
 use rand::distributions::{Weighted, WeightedChoice, Sample};
-use num::{cast, NumCast, Zero, One, Signed};
+use num::{NumCast, Zero, Signed};
 
 /*
 Numeric value trait, defines the types that can be used for the value of each dimension in a
@@ -68,17 +67,7 @@ fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize) -> Array2<V> {
     for i in 1..k as isize {
 		// Calculate the distance to the closest mean for each data point
         let distances = closest_distance(&means.slice(s![0..i, ..]).view(), &data.view(), k);
-        // Find the largest distance to normalize the weights against
-        let max_distance = distances.iter().fold(distances.iter().next().unwrap(), |mx, d|{
-            if d > mx {
-                d
-            } else {
-                mx
-            }
-        });
-		// Pick a random point weighted by the distance from existing means
-        // TODO: sort out the problem here with the weighted choice generator: weights must add to less than u32::MAX.
-        //   The C++ implementation doesn't have this limitation.
+        // Pick a random point weighted by the distance from existing means
         let distance_sum: f64 = distances.iter().fold(0.0f64, |sum, d|{
             sum + num::cast::<V, f64>(*d).unwrap()
         });
@@ -166,9 +155,6 @@ pub fn kmeans_lloyd<V: Value>(data: &ArrayView2<V>, k: usize) -> (Array2<V>, Vec
 
 #[cfg(test)]
 mod tests {
-    use super::kmeans_lloyd;
-    use ndarray::Array2;
-    
     #[test]
     fn test_distance() {
         use ndarray::arr1;
@@ -268,7 +254,7 @@ mod tests {
     #[should_panic(expected = "assertion failed")]
     fn test_min_k() {
         use ndarray::arr2;
-        use super::calculate_means;
+        use super::kmeans_lloyd;
         {
             let d = arr2(&[
                 [1.0f32, 1.0f32],
