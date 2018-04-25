@@ -264,4 +264,32 @@ mod tests {
             kmeans_lloyd(&d.view(), 1);
         }
     }
+
+    #[test]
+    fn test_small_kmeans() {
+        use ndarray::arr2;
+        use super::kmeans_lloyd;
+        {
+            let d = arr2(&[
+                [1.0f32, 1.0f32],
+                [2.0f32, 2.0f32],
+                [1200.0f32, 1200.0f32],
+                [1.0f32, 1.0f32]
+            ]); 
+            let (means, clusters) = kmeans_lloyd(&d.view(), 3);
+            println!("{:?}", clusters);
+            let (count_0, count_1, count_2, count_other) = clusters.iter().fold((0, 0, 0, 0), |counts, v| {
+                (
+                    if *v == 0 { counts.0 + 1 } else { counts.0 },
+                    if *v == 1 { counts.1 + 1 } else { counts.1 },
+                    if *v == 2 { counts.2 + 1 } else { counts.2 },
+                    if *v > 2 { counts.3 + 1 } else { counts.3 }
+                )
+            });
+            assert!(count_0 > 0);
+            assert!(count_1 > 0);
+            assert!(count_2 > 0);
+            assert!(count_other == 0);
+        }
+    }
 }
