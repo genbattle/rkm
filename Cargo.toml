@@ -27,4 +27,5 @@ path = "src/example.rs"
 
 [[bench]]
 name = "bench"
+path = "src/bench.rs"
 harness = false

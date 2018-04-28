@@ -27,10 +27,12 @@ impl<T> Value for T where T: ScalarOperand + Add + Zero + Signed + NumCast + Par
 Find the distance between two data points, given as Array rows.
 */
 fn distance_squared<V: Value>(point_a: &ArrayView1<V>, point_b: &ArrayView1<V>) -> V {
-    point_a.iter().zip(point_b.iter()).fold(num::Zero::zero(), |acc, v| {
-        let delta = *v.0 - *v.1;
-        return acc + (delta * delta);
-    })
+    let mut distance = V::zero();
+    for i in 0..point_a.shape()[0] {
+        let delta = point_a[i] - point_b[i];
+        distance = distance + (delta * delta)
+    }
+    return distance;
 }
 
 /*
@@ -277,6 +279,7 @@ mod tests {
                 [1.0f32, 1.0f32]
             ]); 
             let (means, clusters) = kmeans_lloyd(&d.view(), 3);
+            println!("{:?}", means);
             println!("{:?}", clusters);
             let (count_0, count_1, count_2, count_other) = clusters.iter().fold((0, 0, 0, 0), |counts, v| {
                 (
