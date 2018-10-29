@@ -8,7 +8,7 @@ use bencher::Bencher;
 use ndarray::Array2;
 
 fn read_test_data() -> Array2<f32> {;
-    let mut data_reader = csv::Reader::from_file("data/iris.data").unwrap();
+    let mut data_reader = csv::Reader::from_file("data/iris.data.csv").unwrap();
     let mut data: Vec<f32> = Vec::new();
     for record in data_reader.decode() {
         let (sl, _, pl, _, _): (f32, f32, f32, f32, String) = record.unwrap();
