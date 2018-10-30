@@ -13,15 +13,15 @@ use std::cmp::PartialOrd;
 use std::fmt::Debug;
 use ndarray::{Array2, ArrayView1, ArrayView2, Ix, Axis, ScalarOperand};
 use rand::Rng;
-use rand::distributions::{Weighted, WeightedChoice, Sample};
-use num::{NumCast, Zero, Signed};
+use rand::distributions::{Weighted, WeightedChoice, Distribution};
+use num::{NumCast, Zero, Float};
 
 /*
 Numeric value trait, defines the types that can be used for the value of each dimension in a
 data point.
 */
-pub trait Value: ScalarOperand + Add + Zero + Signed + NumCast + PartialOrd + Copy + Debug {}
-impl<T> Value for T where T: ScalarOperand + Add + Zero + Signed + NumCast + PartialOrd + Copy + Debug {}
+pub trait Value: ScalarOperand + Add + Zero + Float + NumCast + PartialOrd + Copy + Debug {}
+impl<T> Value for T where T: ScalarOperand + Add + Zero + Float + NumCast + PartialOrd + Copy + Debug {}
 
 /*
 Find the distance between two data points, given as Array rows.
@@ -73,6 +73,9 @@ fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize) -> Array2<V> {
         let distance_sum: f64 = distances.iter().fold(0.0f64, |sum, d|{
             sum + num::cast::<V, f64>(*d).unwrap()
         });
+        // let chooser = WeightedIndex::new(distances.iter().zip(0..data_len).map(|p|{
+        //     Weighted{weight: ((num::cast::<V, f64>(*p.0).unwrap() / distance_sum) * ((std::u32::MAX) as f64)).floor() as u32, item: p.1}
+        // }));
         let mut weights: Vec<Weighted<usize>> = distances.iter().zip(0..data_len).map(|p|{
             Weighted{weight: ((num::cast::<V, f64>(*p.0).unwrap() / distance_sum) * ((std::u32::MAX) as f64)).floor() as u32, item: p.1}
         }).collect();
@@ -164,11 +167,11 @@ mod tests {
         let a = arr1(&[1.0f32, 1.0f32]);
         let b = arr1(&[2.0f32, 2.0f32]);
         let c = arr1(&[1200.0f32, 1200.0f32]);
-        let d = arr1(&[1, 1]);
-        let e = arr1(&[1200, 1200]);
+        let d = arr1(&[1.0f32, 1.0f32]);
+        let e = arr1(&[1200.0f32, 1200.0f32]);
         assert_eq!(distance_squared(&a.view(), &b.view()), 2.0f32);
         assert_eq!(distance_squared(&a.view(), &c.view()), 2875202.0f32);
-        assert_eq!(distance_squared(&d.view(), &e.view()), 2875202);
+        assert_eq!(distance_squared(&d.view(), &e.view()), 2875202.0f32);
     }
 
     #[test]
@@ -176,21 +179,21 @@ mod tests {
         use ndarray::arr2;
         use super::closest_distance;
         let a = arr2(&[
-            [1, 1],
-            [2, 2],
-            [100, 4],
-            [3, 100],
-            [7, 88],
-            [70, 20],
-            [22, 12],
+            [1.0f32, 1.0f32],
+            [2.0f32, 2.0f32],
+            [100.0f32, 4.0f32],
+            [3.0f32, 100.0f32],
+            [7.0f32, 88.0f32],
+            [70.0f32, 20.0f32],
+            [22.0f32, 12.0f32],
         ]);
 
         let m = arr2(&[
-            [0, 0],
-            [100, 0],
-            [0, 100],
+            [0.0f32, 0.0f32],
+            [100.0f32, 0.0f32],
+            [0.0f32, 100.0f32],
         ]);
-        assert_eq!(closest_distance(&m.view(), &a.view(), m.len()), vec![2, 8, 16, 9, 193, 1300, 628]);
+        assert_eq!(closest_distance(&m.view(), &a.view(), m.len()), vec![2.0f32, 8.0f32, 16.0f32, 9.0f32, 193.0f32, 1300.0f32, 628.0f32]);
     }
 
     #[test]
@@ -198,23 +201,23 @@ mod tests {
         use ndarray::{arr1, arr2};
         use super::closest_mean;
         {
-            let p = arr1(&[2, -1]);
+            let p = arr1(&[2.0f32, -1.0f32]);
             let m = arr2(&[
-                [1, 1],
-                [5, 100],
-                [44, 65],
-                [-5,-6]
+                [1.0f32, 1.0f32],
+                [5.0f32, 100.0f32],
+                [44.0f32, 65.0f32],
+                [-5.0f32,-6.0f32]
             ]);
             assert_eq!(closest_mean(&p.view(), &m.view()), 0);
         }
 
         {
-            let p = arr1(&[1024, 768]);
+            let p = arr1(&[1024.0f32, 768.0f32]);
             let m = arr2(&[
-                [1, 1],
-                [5, 100],
-                [512, 768],
-                [-5,-6]
+                [1.0f32, 1.0f32],
+                [5.0f32, 100.0f32],
+                [512.0f32, 768.0f32],
+                [-5.0f32, -6.0f32]
             ]);
             assert_eq!(closest_mean(&p.view(), &m.view()), 2);
         }

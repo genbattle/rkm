@@ -3,14 +3,16 @@ extern crate ndarray;
 extern crate csv;
 
 use ndarray::Array2;
+use std::str::FromStr;
 
 fn read_test_data() -> Array2<f32> {;
-    let mut data_reader = csv::Reader::from_file("data/iris.data").unwrap();
+    let mut data_reader = csv::Reader::from_path("data/iris.data.csv").unwrap();
     let mut data: Vec<f32> = Vec::new();
-    for record in data_reader.decode() {
-        let (sl, _, pl, _, _): (f32, f32, f32, f32, String) = record.unwrap();
-        data.push(sl);
-        data.push(pl);
+    for record in data_reader.records() {
+        for field in record.unwrap().iter() {
+            let value = f32::from_str(field);
+            data.push(value.unwrap());
+        }
     }
     Array2::from_shape_vec((data.len() / 2, 2), data).unwrap()
 }
