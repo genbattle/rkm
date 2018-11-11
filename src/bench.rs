@@ -49,5 +49,5 @@ fn bench_dim128(b: &mut Bencher) {
 }
 
 // TODO: birch3 doesn't converge?
-benchmark_group!(benches, bench_iris, bench_s1, bench_dim128);
+benchmark_group!(benches, bench_iris, bench_s1, bench_birch3, bench_dim128);
 benchmark_main!(benches);

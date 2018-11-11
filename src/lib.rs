@@ -64,7 +64,6 @@ fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize) -> Array2<V> {
     let mut rng = rand::thread_rng();
     let data_len = data.shape()[0];
     let chosen = rng.gen_range(0, data_len) as isize;
-    // means.subview_mut(Axis(0), 0).assign()
     means.slice_mut(s![0..1, ..]).assign(&data.slice(s![chosen..(chosen + 1), ..]));
     for i in 1..k as isize {
 		// Calculate the distance to the closest mean for each data point
@@ -73,9 +72,6 @@ fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize) -> Array2<V> {
         let distance_sum: f64 = distances.iter().fold(0.0f64, |sum, d|{
             sum + num::cast::<V, f64>(*d).unwrap()
         });
-        // let chooser = WeightedIndex::new(distances.iter().zip(0..data_len).map(|p|{
-        //     Weighted{weight: ((num::cast::<V, f64>(*p.0).unwrap() / distance_sum) * ((std::u32::MAX) as f64)).floor() as u32, item: p.1}
-        // }));
         let mut weights: Vec<Weighted<usize>> = distances.iter().zip(0..data_len).map(|p|{
             Weighted{weight: ((num::cast::<V, f64>(*p.0).unwrap() / distance_sum) * ((std::u32::MAX) as f64)).floor() as u32, item: p.1}
         }).collect();
