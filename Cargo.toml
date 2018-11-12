@@ -28,3 +28,10 @@ path = "src/example.rs"
 name = "bench"
 path = "src/bench.rs"
 harness = false
+
+# Use for debugging to work around https://github.com/rust-lang/cargo/issues/6301
+# [profile.bench]
+# opt-level = 0
+# debug = 2
+# debug-assertions = true
+# overflow-checks = true
