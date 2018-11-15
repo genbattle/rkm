@@ -5,23 +5,28 @@ This crate contains a simple implementation of the
 
 extern crate rand;
 extern crate num;
+extern crate rayon;
 #[macro_use(s)]
 extern crate ndarray;
+extern crate ndarray_parallel;
 
 use std::ops::Add;
 use std::cmp::PartialOrd;
 use std::fmt::Debug;
+use std::marker::Sync;
 use ndarray::{Array2, ArrayView1, ArrayView2, Ix, Axis, ScalarOperand};
 use rand::Rng;
 use rand::distributions::{Weighted, WeightedChoice, Distribution};
 use num::{NumCast, Zero, Float};
+use rayon::prelude::*;
+use ndarray_parallel::prelude::*;
 
 /*
 Numeric value trait, defines the types that can be used for the value of each dimension in a
 data point.
 */
-pub trait Value: ScalarOperand + Add + Zero + Float + NumCast + PartialOrd + Copy + Debug {}
-impl<T> Value for T where T: ScalarOperand + Add + Zero + Float + NumCast + PartialOrd + Copy + Debug {}
+pub trait Value: ScalarOperand + Add + Zero + Float + NumCast + PartialOrd + Copy + Debug + Sync + Send {}
+impl<T> Value for T where T: ScalarOperand + Add + Zero + Float + NumCast + PartialOrd + Copy + Debug + Sync + Send {}
 
 /*
 Find the distance between two data points, given as Array rows.
@@ -107,7 +112,7 @@ fn closest_mean<V: Value>(point: &ArrayView1<V>, means: &ArrayView2<V>) -> Ix {
 Calculate the index of the mean each data point is closest to (euclidean distance).
 */
 fn calculate_clusters<V: Value>(data: &ArrayView2<V>, means: &ArrayView2<V>) -> Vec<Ix> {
-    data.outer_iter()
+    data.outer_iter().into_par_iter()
     .map(|point|{
         closest_mean(&point.view(), means)
     })
@@ -119,6 +124,8 @@ Calculate means based on data points and their cluster assignments.
 */
 fn calculate_means<V: Value>(data: &ArrayView2<V>, clusters: &Vec<Ix>, old_means: &ArrayView2<V>, k: usize) -> Array2<V> {
     // TODO: replace old_means parameter with just its dimension, or eliminate it completely; that's all we need
+    // TODO: replace this with a sum and a single divide; since we're using floating point, truncation/overflow isn't a concern
+    // TODO: figure out how to parallelize this?
     let (means, _) = clusters.iter()
         .zip(data.outer_iter())
         .fold((Array2::zeros(old_means.dim()), vec![0; k]), |mut cumulative_means, point|{
