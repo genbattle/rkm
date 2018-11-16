@@ -36,12 +36,12 @@ fn bench_s1(b: &mut Bencher) {
 
 // Disabled due to https://github.com/rust-lang/rust/issues/11010
 // Takes ~40 seconds to run and rust uses a minimum of 300 iterations when running benchmarks
-// fn bench_birch3(b: &mut Bencher) {
-//     let data = read_test_data("data/birch3.data.csv", 2);
-//     b.iter(|| {
-//         rkm::kmeans_lloyd(&data.view(), 100)
-//     });
-// }
+fn bench_birch3(b: &mut Bencher) {
+    let data = read_test_data("data/birch3.data.csv", 2);
+    b.iter(|| {
+        rkm::kmeans_lloyd(&data.view(), 100)
+    });
+}
 
 fn bench_dim128(b: &mut Bencher) {
     let data = read_test_data("data/dim128.data.csv", 128);
@@ -51,5 +51,5 @@ fn bench_dim128(b: &mut Bencher) {
 }
 
 // TODO: birch3 doesn't converge?
-benchmark_group!(benches, bench_iris, bench_s1, bench_dim128);
+benchmark_group!(benches, bench_iris, bench_birch3, bench_s1, bench_dim128);
 benchmark_main!(benches);
