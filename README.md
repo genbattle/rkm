@@ -2,28 +2,26 @@
 
 A simple [Rust](https://www.rust-lang.org) implementation of the [k-means clustering algorithm](http://en.wikipedia.org/wiki/K-means_clustering) based on a C++ implementation, [dkm](https://github.com/genbattle/dkm).
 
-This implementation is generic, and will accept any type that satisfies the trait requirements. At a minimum, numeric types including the integer and floating point types built into rust should be supported.
+This implementation is generic, and will accept any type that satisfies the trait requirements. At a minimum, numeric floating point types built into rust should be supported.
 
-A small benchmark for this library is included in `src/bench.rs`. This benchmark yields a run time of approximately 0.30ms per call to `rkm::kmeans_lloyd` on a 1.7GHz Intel i5-4210U processor. By comparison, the C++ implementation of this library [dkm](https://github.com/genbattle/dkm) performs the same task in approximately 0.05ms.
-
-Pull requests to improve this library are actively encouraged.
-
-Known to compile against Rust stable 1.17.0.
+Known to compile against Rust stable 1.30.0.
 
 ### TODOs ###
 * CI
 * Documentation
-* Optimization
 
 ### Data ###
-The iris.data file contains data obtained from the [UCI Machine Learning Repository](https://archive.ics.uci.edu/ml/datasets/Iris). The data contains the following columns:
- - sepal length (cm)
- - sepal width (cm)
- - petal length (cm)
- - petal width (cm)
- - class
- 
- This data is used as a small test/benchmark of the k-means algorithm.
+ A small set of benchmarks for this library is included in `src/bench.rs`. The data sets are as follows:
+
+`iris.data.csv` natural data taken from measurements of different iris plants. 150 points, 2 dimensions, 3 clusters. Source: [UCI machine learning repository](https://archive.ics.uci.edu/ml/datasets/Iris).
+
+`s1.data.csv` synthetic data. 5000 points, 2 dimensions, 15 clusters. Source: P. Fränti and O. Virmajoki, "Iterative shrinking method for clustering problems", _Pattern Recognition_, 39 (5), 761-765, May 2006.
+
+`birch3.data.csv` synthetic data large set. 100000 points, 2 dimensions, 100 clusters. Source: Zhang et al., "BIRCH: A new data clustering algorithm and its applications", _Data Mining and Knowledge Discovery_, 1 (2), 141-182, 1997
+
+`dim128.data.csv` synthetic data with high dimensionality. 1024 points, 128 dimensions, 16 clusters. Source: P. Fränti, O. Virmajoki and V. Hautamäki, "Fast agglomerative clustering using a k-nearest neighbor graph", _IEEE Trans. on Pattern Analysis and Machine Intelligence_, 28 (11), 1875-1881, November 2006
+
+Compared to [dkm](https://github.com/genbattle/dkm) this implementation is slower for the small iris and s1 data sets, but faster for the `dim128` and `birch3` data sets.
 
 ### Licensing ###
  This code is licensed under the MIT license.
