@@ -20,6 +20,7 @@ use rand::distributions::{Weighted, WeightedChoice, Distribution};
 use num::{NumCast, Zero, Float};
 use rayon::prelude::*;
 use ndarray_parallel::prelude::*;
+use rand::prelude::*;
 
 /*
 Numeric value trait, defines the types that can be used for the value of each dimension in a
@@ -43,19 +44,18 @@ fn distance_squared<V: Value>(point_a: &ArrayView1<V>, point_b: &ArrayView1<V>) 
 /*
 Find the shortest distance between each data point and any of a set of mean points.
 */
-fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>, k: usize) -> Vec<V> {
-    let mut distances = Vec::with_capacity(k);
-    for d in data.outer_iter() {
-        let mut closest = distance_squared(&d, &means.outer_iter().next().unwrap());
-        for m in means.outer_iter() {
+fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>) -> Vec<V> {
+    data.outer_iter().into_par_iter().map(|d|{
+        let mut iter = means.outer_iter();
+        let mut closest = distance_squared(&d, &iter.next().unwrap());
+        for m in iter {
             let distance = distance_squared(&d, &m);
             if distance < closest {
                 closest = distance;
             }
         }
-        distances.push(closest);
-    }
-    return distances;
+        closest
+    }).collect()
 }
 
 /*
@@ -66,18 +66,18 @@ fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize) -> Array2<V> {
     assert!(k > 1);
     assert!(data.dim().0 > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
-    let mut rng = rand::thread_rng();
+    let mut rng = SmallRng::from_rng(rand::thread_rng()).unwrap();
     let data_len = data.shape()[0];
     let chosen = rng.gen_range(0, data_len) as isize;
     means.slice_mut(s![0..1, ..]).assign(&data.slice(s![chosen..(chosen + 1), ..]));
     for i in 1..k as isize {
 		// Calculate the distance to the closest mean for each data point
-        let distances = closest_distance(&means.slice(s![0..i, ..]).view(), &data.view(), k);
+        let distances = closest_distance(&means.slice(s![0..i, ..]).view(), &data.view());
         // Pick a random point weighted by the distance from existing means
         let distance_sum: f64 = distances.iter().fold(0.0f64, |sum, d|{
             sum + num::cast::<V, f64>(*d).unwrap()
         });
-        let mut weights: Vec<Weighted<usize>> = distances.iter().zip(0..data_len).map(|p|{
+        let mut weights: Vec<Weighted<usize>> = distances.par_iter().zip(0..data_len).map(|p|{
             Weighted{weight: ((num::cast::<V, f64>(*p.0).unwrap() / distance_sum) * ((std::u32::MAX) as f64)).floor() as u32, item: p.1}
         }).collect();
         let mut chooser = WeightedChoice::new(&mut weights);
@@ -203,7 +203,7 @@ mod tests {
             [100.0f32, 0.0f32],
             [0.0f32, 100.0f32],
         ]);
-        assert_eq!(closest_distance(&m.view(), &a.view(), m.len()), vec![2.0f32, 8.0f32, 16.0f32, 9.0f32, 193.0f32, 1300.0f32, 628.0f32]);
+        assert_eq!(closest_distance(&m.view(), &a.view()), vec![2.0f32, 8.0f32, 16.0f32, 9.0f32, 193.0f32, 1300.0f32, 628.0f32]);
     }
 
     #[test]
