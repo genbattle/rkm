@@ -8,6 +8,7 @@ readme = "README.md"
 license = "MIT"
 keywords = ["kmeans", "k-means", "means", "cluster", "clustering"]
 categories = ["algorithms", "science"]
+exclude = ["data/*"]
 
 [dependencies]
 csv = "1.0.2"
