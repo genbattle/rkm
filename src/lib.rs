@@ -151,6 +151,12 @@ fn calculate_means<V: Value>(data: &ArrayView2<V>, clusters: &Vec<Ix>, old_means
     means
 }
 
+/*
+Calculate means and cluster assignments for the given data and number of clusters (k).
+Returns a tuple containing the means (as a 2D ndarray) and a `Vec` of indices that
+map into the means ndarray and correspond elementwise to each input data point to give
+the cluster assignments for each data point.
+*/
 pub fn kmeans_lloyd<V: Value>(data: &ArrayView2<V>, k: usize) -> (Array2<V>, Vec<usize>) {
     assert!(k > 1);
     assert!(data.dim().0 >= k);
