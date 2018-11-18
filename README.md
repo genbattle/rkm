@@ -1,14 +1,15 @@
 # RKM - Rust k-means #
 
+[![docs](https://docs.rs/rkm/badge.svg)](https://docs.rs/rkm/latest/rkm/) [![crates.io](https://img.shields.io/crates/v/rkm.svg)](https://crates.io/crates/rkm)
+
 A simple [Rust](https://www.rust-lang.org) implementation of the [k-means clustering algorithm](http://en.wikipedia.org/wiki/K-means_clustering) based on a C++ implementation, [dkm](https://github.com/genbattle/dkm).
 
-This implementation is generic, and will accept any type that satisfies the trait requirements. At a minimum, numeric floating point types built into rust should be supported.
+This implementation is generic, and will accept any type that satisfies the trait requirements. At a minimum, numeric floating point types built into rust should be supported. Uses rayon for parallelism to improve scalability at the cost of some performance on small data sets.
 
 Known to compile against Rust stable 1.30.0.
 
 ### TODOs ###
 * CI
-* Documentation
 
 ### Data ###
  A small set of benchmarks for this library is included in `src/bench.rs`. The data sets are as follows:
