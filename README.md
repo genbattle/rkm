@@ -12,7 +12,9 @@ Known to compile against Rust stable 1.32.0.
 
 ### Usage ###
 
-Calculate the k-means clusters for a set of data by calling `rkm::kmeans_lloyd` with your dataset in a 2D `ndarray` array and the number of clusters you would like to segment the data into. See `src/example.rs` for a simple usage example.
+Calculate the k-means clusters for a set of data by calling `rkm::kmeans_lloyd` with your dataset in a 2D `ndarray` array and the number of clusters you would like to segment the data into. The return value will be a tuple containing the cluster means/centroids (as a 2D `ndarray`) and a `Vec` of indices that map each of the input data points to an element of the means array.
+
+See `src/example.rs` for a simple usage example.
 
 ### TODOs ###
 * CI
