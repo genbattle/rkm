@@ -6,7 +6,13 @@ A simple [Rust](https://www.rust-lang.org) implementation of the [k-means cluste
 
 This implementation is generic, and will accept any type that satisfies the trait requirements. At a minimum, numeric floating point types built into rust should be supported. Uses rayon for parallelism to improve scalability at the cost of some performance on small data sets.
 
-Known to compile against Rust stable 1.30.0.
+The `parallel` feature enables parallelism to speed up the algorithm in complex cases. The parallel algorithm may be slower than the non-parallel algorithm for small data sets, but is much faster for data sets with high dimensionality. Make sure you benchmark your use case with both configurations before deciding which to use.
+
+Known to compile against Rust stable 1.32.0.
+
+### Usage ###
+
+Calculate the k-means clusters for a set of data by calling `rkm::kmeans_lloyd` with your dataset in a 2D `ndarray` array and the number of clusters you would like to segment the data into. See `src/example.rs` for a simple usage example.
 
 ### TODOs ###
 * CI
