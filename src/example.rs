@@ -20,6 +20,6 @@ fn read_test_data() -> Array2<f32> {;
 
 pub fn main() {
     let data = read_test_data();
-    let (means, clusters) = rkm::kmeans_lloyd(&data.view(), 3);
+    let (means, clusters) = rkm::kmeans_lloyd(&data.view(), 3, None);
     println!("data:\n{:?}\nmeans:\n{:?}\nclusters:\n{:?}", data, means, clusters);
 }
