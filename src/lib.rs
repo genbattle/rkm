@@ -85,11 +85,14 @@ This is a mean initialization method based on the [kmeans++](https://en.wikipedi
 initialization algorithm (parallel version).
 */
 #[cfg(feature = "parallel")]
-fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize) -> Array2<V> {
+fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<u128>) -> Array2<V> {
     assert!(k > 1);
     assert!(data.dim().0 > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
-    let mut rng = SmallRng::from_rng(rand::thread_rng()).unwrap();
+    let mut rng = match seed {
+        Some(seed) => SmallRng::from_seed(seed.to_le_bytes()),
+        None => SmallRng::from_rng(rand::thread_rng()).unwrap(),
+    };
     let data_len = data.shape()[0];
     let chosen = rng.gen_range(0, data_len) as isize;
     means.slice_mut(s![0..1, ..]).assign(&data.slice(s![chosen..(chosen + 1), ..]));
@@ -115,11 +118,14 @@ This is a mean initialization method based on the [kmeans++](https://en.wikipedi
 initialization algorithm.
 */
 #[cfg(not(feature = "parallel"))]
-fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize) -> Array2<V> {
+fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<u128>) -> Array2<V> {
     assert!(k > 1);
     assert!(data.dim().0 > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
-    let mut rng = SmallRng::from_rng(rand::thread_rng()).unwrap();
+    let mut rng = match seed {
+        Some(seed) => SmallRng::from_seed(seed.to_le_bytes()),
+        None => SmallRng::from_rng(rand::thread_rng()).unwrap(),
+    };
     let data_len = data.shape()[0];
     let chosen = rng.gen_range(0, data_len) as isize;
     means.slice_mut(s![0..1, ..]).assign(&data.slice(s![chosen..(chosen + 1), ..]));
@@ -133,7 +139,7 @@ fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize) -> Array2<V> {
         let mut weights: Vec<Weighted<usize>> = distances.iter().zip(0..data_len).map(|p|{
             Weighted{weight: ((num::cast::<V, f64>(*p.0).unwrap() / distance_sum) * ((std::u32::MAX) as f64)).floor() as u32, item: p.1}
         }).collect();
-        let mut chooser = WeightedChoice::new(&mut weights);
+        let chooser = WeightedChoice::new(&mut weights);
         let chosen = chooser.sample(&mut rng) as isize;
         means.slice_mut(s![i..(i + 1), ..]).assign(&data.slice(s![chosen..(chosen + 1), ..]));
     }
@@ -228,7 +234,7 @@ fn calculate_means<V: Value>(data: &ArrayView2<V>, clusters: &Vec<Ix>, old_means
         .zip(data.outer_iter())
         .fold((Array2::zeros(old_means.dim()), vec![0; k]), |mut cumulative_means, point|{
             {
-                let mut mean = cumulative_means.0.subview_mut(Axis(0), *point.0);
+                let mut mean = cumulative_means.0.index_axis_mut(Axis(0), *point.0);
                 let n = V::from(cumulative_means.1[*point.0]).unwrap();
                 let step1 = &mean * n;
                 let step2 = &step1 + &point.1;
@@ -246,11 +252,11 @@ fn calculate_means<V: Value>(data: &ArrayView2<V>, clusters: &Vec<Ix>, old_means
 /// Returns a tuple containing the means (as a 2D ndarray) and a `Vec` of indices that
 /// map into the means ndarray and correspond elementwise to each input data point to give
 /// the cluster assignments for each data point.
-pub fn kmeans_lloyd<V: Value>(data: &ArrayView2<V>, k: usize) -> (Array2<V>, Vec<usize>) {
+pub fn kmeans_lloyd<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<u128>) -> (Array2<V>, Vec<usize>) {
     assert!(k > 1);
     assert!(data.dim().0 >= k);
 
-    let mut old_means = initialize_plusplus(data, k);
+    let mut old_means = initialize_plusplus(data, k, seed);
     let mut clusters = calculate_clusters(data, &old_means.view());
     let mut means = calculate_means(data, &clusters, &old_means.view(), k);
 
@@ -371,7 +377,7 @@ mod tests {
                 [2.0f32, 2.0f32],
                 [3.0f32, 3.0f32]
             ]); 
-            kmeans_lloyd(&d.view(), 1);
+            kmeans_lloyd(&d.view(), 1, None);
         }
     }
 
@@ -386,7 +392,7 @@ mod tests {
                 [1200.0f32, 1200.0f32],
                 [1.0f32, 1.0f32]
             ]); 
-            let (means, clusters) = kmeans_lloyd(&d.view(), 3);
+            let (means, clusters) = kmeans_lloyd(&d.view(), 3, None);
             println!("{:?}", means);
             println!("{:?}", clusters);
             let (count_0, count_1, count_2, count_other) = clusters.iter().fold((0, 0, 0, 0), |counts, v| {
