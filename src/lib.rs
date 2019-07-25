@@ -234,7 +234,7 @@ fn calculate_means<V: Value>(data: &ArrayView2<V>, clusters: &Vec<Ix>, old_means
         .zip(data.outer_iter())
         .fold((Array2::zeros(old_means.dim()), vec![0; k]), |mut cumulative_means, point|{
             {
-                let mut mean = cumulative_means.0.index_axis_mut(Axis(0), *point.0);
+                let mut mean = cumulative_means.0.subview_mut(Axis(0), *point.0);
                 let n = V::from(cumulative_means.1[*point.0]).unwrap();
                 let step1 = &mean * n;
                 let step2 = &step1 + &point.1;
@@ -389,24 +389,24 @@ mod tests {
             let d = arr2(&[
                 [1.0f32, 1.0f32],
                 [2.0f32, 2.0f32],
+                [3.0f32, 3.0f32],
                 [1200.0f32, 1200.0f32],
-                [1.0f32, 1.0f32]
-            ]); 
-            let (means, clusters) = kmeans_lloyd(&d.view(), 3, None);
+                [956.0f32, 956.0f32],
+                [1024.0f32, 1024.0f32],
+                [1024.0f32, 17.0f32],
+                [1171.0f32, 20.0f32]
+            ]);
+            let expected_means = arr2(&[
+                [2.0f32, 2.0f32],
+                [1097.5f32, 18.5f32],
+                [1060.0f32, 1060.0f32]
+            ]);
+            let expected_clusters = vec![0, 0, 0, 2, 2, 2, 1, 1];
+            let (means, clusters) = kmeans_lloyd(&d.view(), 3, Some(0));
             println!("{:?}", means);
             println!("{:?}", clusters);
-            let (count_0, count_1, count_2, count_other) = clusters.iter().fold((0, 0, 0, 0), |counts, v| {
-                (
-                    if *v == 0 { counts.0 + 1 } else { counts.0 },
-                    if *v == 1 { counts.1 + 1 } else { counts.1 },
-                    if *v == 2 { counts.2 + 1 } else { counts.2 },
-                    if *v > 2 { counts.3 + 1 } else { counts.3 }
-                )
-            });
-            assert!(count_0 > 0);
-            assert!(count_1 > 0);
-            assert!(count_2 > 0);
-            assert!(count_other == 0);
+            assert!(clusters == expected_clusters);
+            assert!(means == expected_means);
         }
     }
 }
