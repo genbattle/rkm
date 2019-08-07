@@ -17,7 +17,7 @@ Calculate the k-means clusters for a set of data by calling `rkm::kmeans_lloyd` 
 See `src/example.rs` for a simple usage example.
 
 ### TODOs ###
-* CI
+* Termination conditions (iterations and delta).
 
 ### Data ###
  A small set of benchmarks for this library is included in `src/bench.rs`. The data sets are as follows:
