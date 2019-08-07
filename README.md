@@ -1,6 +1,6 @@
 # RKM - Rust k-means #
 
-[![docs](https://docs.rs/rkm/badge.svg)](https://docs.rs/rkm/latest/rkm/) [![crates.io](https://img.shields.io/crates/v/rkm.svg)](https://crates.io/crates/rkm)
+[![Build Status](https://travis-ci.org/genbattle/rkm.svg?branch=master)](https://travis-ci.org/genbattle/rkm)[![docs](https://docs.rs/rkm/badge.svg)](https://docs.rs/rkm/latest/rkm/) [![crates.io](https://img.shields.io/crates/v/rkm.svg)](https://crates.io/crates/rkm)
 
 A simple [Rust](https://www.rust-lang.org) implementation of the [k-means clustering algorithm](http://en.wikipedia.org/wiki/K-means_clustering) based on a C++ implementation, [dkm](https://github.com/genbattle/dkm).
 
