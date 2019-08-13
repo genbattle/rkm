@@ -36,6 +36,41 @@ impl<T> Value for T where
 {
 }
 
+pub type RandomSeed = <rand::XorShiftRng as rand::SeedableRng>::Seed;
+
+/// Algorithm configuration parameters, passed to `rkm::kmeans_lloyd` to specify:
+/// * Random number generator seed
+/// * The maximum number of iterations to terminate the algorithm at
+/// * The minimum delta for all means from iteration to iteration
+/// The algorithm will terminate if the maximum number of iterations is exceeded, or none of the means
+/// change by at least the minimum delta distance, or the algorithm converges.
+#[derive(Debug)]
+pub struct Config<V: Value> {
+    random_seed: Option<RandomSeed>,
+    max_iterations: Option<u64>,
+    min_delta: Option<V>,
+}
+
+impl<V: Value> Config<V> {
+    /// Create a new config struct from a partial or complete set of parameters
+    pub fn from(random_seed: Option<RandomSeed>, max_iterations: Option<u64>, min_delta: Option<V>) -> Config<V> {
+        Config {
+            random_seed: random_seed,
+            max_iterations: max_iterations,
+            min_delta: min_delta,
+        }
+    }
+
+    /// Create an empty config struct
+    pub fn empty() -> Config<V> {
+        Config {
+            random_seed: None,
+            max_iterations: None,
+            min_delta: None,
+        }
+    }
+}
+
 /// Find the distance between two data points, given as Array rows.
 fn distance_squared<V: Value>(point_a: &ArrayView1<V>, point_b: &ArrayView1<V>) -> V {
     let mut distance = V::zero();
@@ -86,13 +121,13 @@ fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>) -> Ve
 /// This is a mean initialization method based on the [kmeans++](https://en.wikipedia.org/wiki/K-means%2B%2B)
 /// initialization algorithm (parallel version).
 #[cfg(feature = "parallel")]
-fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<u128>) -> Array2<V> {
+fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<RandomSeed>) -> Array2<V> {
     assert!(k > 1);
     assert!(data.dim().0 > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
     let mut rng = match seed {
-        Some(seed) => SmallRng::from_seed(seed.to_le_bytes()),
-        None => SmallRng::from_rng(rand::thread_rng()).unwrap(),
+        Some(seed) => XorShiftRng::from_seed(seed),
+        None => XorShiftRng::from_rng(rand::thread_rng()).unwrap(),
     };
     let data_len = data.shape()[0];
     let chosen = rng.gen_range(0, data_len) as isize;
@@ -128,12 +163,12 @@ fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<u1
 /// This is a mean initialization method based on the [kmeans++](https://en.wikipedia.org/wiki/K-means%2B%2B)
 /// initialization algorithm.
 #[cfg(not(feature = "parallel"))]
-fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<u128>) -> Array2<V> {
+fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<RandomSeed>) -> Array2<V> {
     assert!(k > 1);
     assert!(data.dim().0 > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
     let mut rng = match seed {
-        Some(seed) => SmallRng::from_seed(seed.to_le_bytes()),
+        Some(seed) => SmallRng::from_seed(seed),
         None => SmallRng::from_rng(rand::thread_rng()).unwrap(),
     };
     let data_len = data.shape()[0];
@@ -284,12 +319,12 @@ fn calculate_means<V: Value>(
 pub fn kmeans_lloyd<V: Value>(
     data: &ArrayView2<V>,
     k: usize,
-    seed: Option<u128>,
+    config: &Config<V>,
 ) -> (Array2<V>, Vec<usize>) {
     assert!(k > 1);
     assert!(data.dim().0 >= k);
 
-    let mut old_means = initialize_plusplus(data, k, seed);
+    let mut old_means = initialize_plusplus(data, k, config.random_seed);
     let mut clusters = calculate_clusters(data, &old_means.view());
     let mut means = calculate_means(data, &clusters, &old_means.view(), k);
 
@@ -402,16 +437,18 @@ mod tests {
     #[should_panic(expected = "assertion failed")]
     fn test_min_k() {
         use super::kmeans_lloyd;
+        use super::Config;
         use ndarray::arr2;
         {
             let d = arr2(&[[1.0f32, 1.0f32], [2.0f32, 2.0f32], [3.0f32, 3.0f32]]);
-            kmeans_lloyd(&d.view(), 1, None);
+            kmeans_lloyd(&d.view(), 1, &Config::empty());
         }
     }
 
     #[test]
     fn test_small_kmeans() {
         use super::kmeans_lloyd;
+        use super::Config;
         use ndarray::arr2;
         {
             let d = arr2(&[
@@ -430,7 +467,8 @@ mod tests {
                 [1060.0f32, 1060.0f32],
             ]);
             let expected_clusters = vec![0, 0, 0, 2, 2, 2, 1, 1];
-            let (means, clusters) = kmeans_lloyd(&d.view(), 3, Some(0));
+            let config = Config::from(Some((0 as u128).to_le_bytes()), None, None);
+            let (means, clusters) = kmeans_lloyd(&d.view(), 3, &config);
             println!("{:?}", means);
             println!("{:?}", clusters);
             assert!(clusters == expected_clusters);
