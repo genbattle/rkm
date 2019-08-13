@@ -25,10 +25,8 @@ use std::fmt::Debug;
 use std::marker::Sync;
 use std::ops::Add;
 
-/*
-Numeric value trait, defines the types that can be used for the value of each dimension in a
-data point.
-*/
+/// Numeric value trait, defines the types that can be used for the value of each dimension in a
+/// data point.
 pub trait Value:
     ScalarOperand + Add + Zero + Float + NumCast + PartialOrd + Copy + Debug + Sync + Send
 {
@@ -38,9 +36,7 @@ impl<T> Value for T where
 {
 }
 
-/*
-Find the distance between two data points, given as Array rows.
-*/
+/// Find the distance between two data points, given as Array rows.
 fn distance_squared<V: Value>(point_a: &ArrayView1<V>, point_b: &ArrayView1<V>) -> V {
     let mut distance = V::zero();
     for i in 0..point_a.shape()[0] {
@@ -50,9 +46,7 @@ fn distance_squared<V: Value>(point_a: &ArrayView1<V>, point_b: &ArrayView1<V>) 
     return distance;
 }
 
-/*
-Find the shortest distance between each data point and any of a set of mean points (parallel version).
-*/
+/// Find the shortest distance between each data point and any of a set of mean points (parallel version).
 #[cfg(feature = "parallel")]
 fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>) -> Vec<V> {
     data.outer_iter()
@@ -71,9 +65,7 @@ fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>) -> Ve
         .collect()
 }
 
-/*
-Find the shortest distance between each data point and any of a set of mean points.
-*/
+/// Find the shortest distance between each data point and any of a set of mean points.
 #[cfg(not(feature = "parallel"))]
 fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>) -> Vec<V> {
     data.outer_iter()
@@ -91,10 +83,8 @@ fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>) -> Ve
         .collect()
 }
 
-/*
-This is a mean initialization method based on the [kmeans++](https://en.wikipedia.org/wiki/K-means%2B%2B)
-initialization algorithm (parallel version).
-*/
+/// This is a mean initialization method based on the [kmeans++](https://en.wikipedia.org/wiki/K-means%2B%2B)
+/// initialization algorithm (parallel version).
 #[cfg(feature = "parallel")]
 fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<u128>) -> Array2<V> {
     assert!(k > 1);
@@ -135,10 +125,8 @@ fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<u1
     means
 }
 
-/*
-This is a mean initialization method based on the [kmeans++](https://en.wikipedia.org/wiki/K-means%2B%2B)
-initialization algorithm.
-*/
+/// This is a mean initialization method based on the [kmeans++](https://en.wikipedia.org/wiki/K-means%2B%2B)
+/// initialization algorithm.
 #[cfg(not(feature = "parallel"))]
 fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<u128>) -> Array2<V> {
     assert!(k > 1);
@@ -179,9 +167,7 @@ fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<u1
     means
 }
 
-/*
-Find the closest mean to a particular data point.
-*/
+/// Find the closest mean to a particular data point.
 fn closest_mean<V: Value>(point: &ArrayView1<V>, means: &ArrayView2<V>) -> Ix {
     assert!(means.dim().0 > 0);
     let mut iter = means.outer_iter().enumerate();
@@ -200,9 +186,7 @@ fn closest_mean<V: Value>(point: &ArrayView1<V>, means: &ArrayView2<V>) -> Ix {
     return 0; // Should never hit this due to the assertion of the precondition
 }
 
-/*
-Calculate the index of the mean each data point is closest to (euclidean distance) (parallel version).
-*/
+/// Calculate the index of the mean each data point is closest to (euclidean distance) (parallel version).
 #[cfg(feature = "parallel")]
 fn calculate_clusters<V: Value>(data: &ArrayView2<V>, means: &ArrayView2<V>) -> Vec<Ix> {
     data.outer_iter()
@@ -211,9 +195,7 @@ fn calculate_clusters<V: Value>(data: &ArrayView2<V>, means: &ArrayView2<V>) -> 
         .collect()
 }
 
-/*
-Calculate the index of the mean each data point is closest to (euclidean distance).
-*/
+/// Calculate the index of the mean each data point is closest to (euclidean distance).
 #[cfg(not(feature = "parallel"))]
 fn calculate_clusters<V: Value>(data: &ArrayView2<V>, means: &ArrayView2<V>) -> Vec<Ix> {
     data.outer_iter()
@@ -221,9 +203,7 @@ fn calculate_clusters<V: Value>(data: &ArrayView2<V>, means: &ArrayView2<V>) -> 
         .collect()
 }
 
-/*
-Calculate means based on data points and their cluster assignments (parallel version)
-*/
+/// Calculate means based on data points and their cluster assignments (parallel version)
 #[cfg(feature = "parallel")]
 fn calculate_means<V: Value>(
     data: &ArrayView2<V>,
@@ -269,9 +249,7 @@ fn calculate_means<V: Value>(
     means
 }
 
-/*
-Calculate means based on data points and their cluster assignments.
-*/
+/// Calculate means based on data points and their cluster assignments.
 #[cfg(not(feature = "parallel"))]
 fn calculate_means<V: Value>(
     data: &ArrayView2<V>,
