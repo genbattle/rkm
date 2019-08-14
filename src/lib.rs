@@ -75,7 +75,7 @@ impl<V: Value> Config<V> {
     }
 }
 
-/// Find the distance between two data points, given as Array rows.
+/// Find the square of the distance between two data points, given as Array rows.
 fn distance_squared<V: Value>(point_a: &ArrayView1<V>, point_b: &ArrayView1<V>) -> V {
     let mut distance = V::zero();
     for i in 0..point_a.shape()[0] {
@@ -83,6 +83,12 @@ fn distance_squared<V: Value>(point_a: &ArrayView1<V>, point_b: &ArrayView1<V>) 
         distance = distance + (delta * delta)
     }
     return distance;
+}
+
+/// Find the distance between two data points.
+fn distance<V: Value>(point_a: &ArrayView1<V>, point_b: &ArrayView1<V>) -> V {
+    let d_squared = distance_squared(point_a, point_b);
+    d_squared.sqrt()
 }
 
 /// Find the shortest distance between each data point and any of a set of mean points (parallel version).
@@ -324,6 +330,25 @@ fn calculate_means<V: Value>(
     means
 }
 
+/// Calculate magnitude deltas between two sets of points
+fn deltas<V: Value>(old_means: &ArrayView2<V>, new_means: &ArrayView2<V>) -> Vec<V> {
+    old_means
+        .outer_iter()
+        .zip(new_means.outer_iter())
+        .map(|points| distance(&points.0, &points.1))
+        .collect()
+}
+
+/// Check if any of the deltas between two sets of points have exceeded a given limit
+fn deltas_below_limit<V: Value>(
+    old_means: &ArrayView2<V>,
+    new_means: &ArrayView2<V>,
+    limit: V,
+) -> bool {
+    let deltas = deltas(old_means, new_means);
+    deltas.into_iter().all(|d| d < limit)
+}
+
 /// Calculate means and cluster assignments for the given data and number of clusters (k).
 /// Returns a tuple containing the means (as a 2D ndarray) and a `Vec` of indices that
 /// map into the means ndarray and correspond elementwise to each input data point to give
@@ -345,11 +370,17 @@ pub fn kmeans_lloyd_with_config<V: Value>(
     let mut old_means = initialize_plusplus(data, k, config.random_seed);
     let mut clusters = calculate_clusters(data, &old_means.view());
     let mut means = calculate_means(data, &clusters, &old_means.view(), k);
+    let mut iteration_count = 0;
 
-    while means != old_means {
+    while means != old_means
+        && !(config.max_iterations.is_some() && iteration_count == config.max_iterations.unwrap())
+        && !(config.min_delta.is_some()
+            && deltas_below_limit(&old_means.view(), &means.view(), config.min_delta.unwrap()))
+    {
         clusters = calculate_clusters(data, &means.view());
         old_means = means;
         means = calculate_means(data, &clusters, &old_means.view(), k);
+        iteration_count += 1;
     }
 
     (means, clusters)
