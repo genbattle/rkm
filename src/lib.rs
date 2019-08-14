@@ -53,7 +53,11 @@ pub struct Config<V: Value> {
 
 impl<V: Value> Config<V> {
     /// Create a new config struct from a partial or complete set of parameters
-    pub fn from(random_seed: Option<RandomSeed>, max_iterations: Option<u64>, min_delta: Option<V>) -> Config<V> {
+    pub fn from(
+        random_seed: Option<RandomSeed>,
+        max_iterations: Option<u64>,
+        min_delta: Option<V>,
+    ) -> Config<V> {
         Config {
             random_seed: random_seed,
             max_iterations: max_iterations,
@@ -121,7 +125,11 @@ fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>) -> Ve
 /// This is a mean initialization method based on the [kmeans++](https://en.wikipedia.org/wiki/K-means%2B%2B)
 /// initialization algorithm (parallel version).
 #[cfg(feature = "parallel")]
-fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<RandomSeed>) -> Array2<V> {
+fn initialize_plusplus<V: Value>(
+    data: &ArrayView2<V>,
+    k: usize,
+    seed: Option<RandomSeed>,
+) -> Array2<V> {
     assert!(k > 1);
     assert!(data.dim().0 > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
@@ -163,7 +171,11 @@ fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<Ra
 /// This is a mean initialization method based on the [kmeans++](https://en.wikipedia.org/wiki/K-means%2B%2B)
 /// initialization algorithm.
 #[cfg(not(feature = "parallel"))]
-fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<RandomSeed>) -> Array2<V> {
+fn initialize_plusplus<V: Value>(
+    data: &ArrayView2<V>,
+    k: usize,
+    seed: Option<RandomSeed>,
+) -> Array2<V> {
     assert!(k > 1);
     assert!(data.dim().0 > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
@@ -315,8 +327,14 @@ fn calculate_means<V: Value>(
 /// Calculate means and cluster assignments for the given data and number of clusters (k).
 /// Returns a tuple containing the means (as a 2D ndarray) and a `Vec` of indices that
 /// map into the means ndarray and correspond elementwise to each input data point to give
-/// the cluster assignments for each data point.
-pub fn kmeans_lloyd<V: Value>(
+/// the cluster assignments for each data point. Takes a `Config` object which can be used to
+/// optionally specify:
+/// * Random number seed (for initialization)
+/// * Maximum number of iterations
+/// * Minimum mean delta distance
+/// The algorithm will terminate when convergence is reached, or the number of iterations
+/// equals the maximum, or none of the means change by at least the minimum delta distance.
+pub fn kmeans_lloyd_with_config<V: Value>(
     data: &ArrayView2<V>,
     k: usize,
     config: &Config<V>,
@@ -335,6 +353,14 @@ pub fn kmeans_lloyd<V: Value>(
     }
 
     (means, clusters)
+}
+
+/// Calculate means and cluster assignments for the given data and number of clusters (k).
+/// Returns a tuple containing the means (as a 2D ndarray) and a `Vec` of indices that
+/// map into the means ndarray and correspond elementwise to each input data point to give
+/// the cluster assignments for each data point.
+pub fn kmeans_lloyd<V: Value>(data: &ArrayView2<V>, k: usize) -> (Array2<V>, Vec<usize>) {
+    kmeans_lloyd_with_config(data, k, &Config::empty())
 }
 
 #[cfg(test)]
@@ -437,17 +463,16 @@ mod tests {
     #[should_panic(expected = "assertion failed")]
     fn test_min_k() {
         use super::kmeans_lloyd;
-        use super::Config;
         use ndarray::arr2;
         {
             let d = arr2(&[[1.0f32, 1.0f32], [2.0f32, 2.0f32], [3.0f32, 3.0f32]]);
-            kmeans_lloyd(&d.view(), 1, &Config::empty());
+            kmeans_lloyd(&d.view(), 1);
         }
     }
 
     #[test]
     fn test_small_kmeans() {
-        use super::kmeans_lloyd;
+        use super::kmeans_lloyd_with_config;
         use super::Config;
         use ndarray::arr2;
         {
@@ -468,7 +493,7 @@ mod tests {
             ]);
             let expected_clusters = vec![0, 0, 0, 2, 2, 2, 1, 1];
             let config = Config::from(Some((0 as u128).to_le_bytes()), None, None);
-            let (means, clusters) = kmeans_lloyd(&d.view(), 3, &config);
+            let (means, clusters) = kmeans_lloyd_with_config(&d.view(), 3, &config);
             println!("{:?}", means);
             println!("{:?}", clusters);
             assert!(clusters == expected_clusters);

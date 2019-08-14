@@ -32,6 +32,7 @@ fn bench_s1(b: &mut Bencher) {
 
 // Disabled due to https://github.com/rust-lang/rust/issues/11010
 // Takes ~40 seconds to run and rust uses a minimum of 300 iterations when running benchmarks
+#[allow(dead_code)]
 fn bench_birch3(b: &mut Bencher) {
     let data = read_test_data("data/birch3.data.csv", 2);
     b.iter(|| rkm::kmeans_lloyd(&data.view(), 100));
