@@ -104,6 +104,7 @@ fn initialize_plusplus<V: Value>(
     assert!(k > 1);
     assert!(data.dim().0 > 0);
     let n_trials = n_trials.unwrap_or(2 + (k as f64).ln().floor() as usize);
+    assert!(n_trials > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
     let mut rng = match seed {
         Some(seed) => SmallRng::from_seed(seed.to_le_bytes()),
@@ -165,6 +166,7 @@ fn initialize_plusplus<V: Value>(
     assert!(k > 1);
     assert!(data.dim().0 > 0);
     let n_trials = n_trials.unwrap_or(2 + (k as f64).ln().floor() as usize);
+    assert!(n_trials > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
     let mut rng = match seed {
         Some(seed) => SmallRng::from_seed(seed.to_le_bytes()),
@@ -317,7 +319,7 @@ fn calculate_means<V: Value>(
         (Array2::zeros(old_means.dim()), vec![0; k]),
         |mut cumulative_means, point| {
             {
-                let mut mean = cumulative_means.0.subview_mut(Axis(0), *point.0);
+                let mut mean = cumulative_means.0.index_axis_mut(Axis(0), *point.0);
                 let n = V::from(cumulative_means.1[*point.0]).unwrap();
                 let step1 = &mean * n;
                 let step2 = &step1 + &point.1;
@@ -481,11 +483,11 @@ mod tests {
                 [1171.0f32, 20.0f32],
             ]);
             let expected_means = arr2(&[
-                [2.0f32, 2.0f32],
                 [1097.5f32, 18.5f32],
+                [2.0f32, 2.0f32],
                 [1060.0f32, 1060.0f32],
             ]);
-            let expected_clusters = vec![0, 0, 0, 2, 2, 2, 1, 1];
+            let expected_clusters = vec![1, 1, 1, 2, 2, 2, 0, 0];
             let (means, clusters) = kmeans_lloyd(&d.view(), 3, Some(1), Some(0));
             println!("{:?}", means);
             println!("{:?}", clusters);
