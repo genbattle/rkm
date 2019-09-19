@@ -15,9 +15,8 @@ use ndarray::{Array2, ArrayView1, ArrayView2, Axis, Ix, ScalarOperand};
 #[cfg(feature = "parallel")]
 use ndarray_parallel::prelude::*;
 use num::{Float, NumCast, Zero};
-use rand::distributions::{Distribution, Weighted, WeightedChoice};
-use rand::prelude::*;
-use rand::Rng;
+use rand::distributions::{Distribution, WeightedIndex};
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use std::cmp::PartialOrd;
@@ -96,38 +95,56 @@ This is a mean initialization method based on the [kmeans++](https://en.wikipedi
 initialization algorithm (parallel version).
 */
 #[cfg(feature = "parallel")]
-fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<u128>) -> Array2<V> {
+fn initialize_plusplus<V: Value>(
+    data: &ArrayView2<V>,
+    k: usize,
+    n_trials: Option<usize>,
+    seed: Option<u128>,
+) -> Array2<V> {
     assert!(k > 1);
     assert!(data.dim().0 > 0);
+    let n_trials = n_trials.unwrap_or(2 + (k as f64).ln().floor() as usize);
+    assert!(n_trials > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
     let mut rng = match seed {
         Some(seed) => SmallRng::from_seed(seed.to_le_bytes()),
         None => SmallRng::from_rng(rand::thread_rng()).unwrap(),
     };
     let data_len = data.shape()[0];
-    let chosen = rng.gen_range(0, data_len) as isize;
+    let chosen = rng.gen_range(0, data_len);
     means
         .slice_mut(s![0..1, ..])
         .assign(&data.slice(s![chosen..(chosen + 1), ..]));
-    for i in 1..k as isize {
+    for i in 1..k {
         // Calculate the distance to the closest mean for each data point
         let distances = closest_distance(&means.slice(s![0..i, ..]).view(), &data.view());
         // Pick a random point weighted by the distance from existing means
         let distance_sum: f64 = distances
             .iter()
             .fold(0.0f64, |sum, d| sum + num::cast::<V, f64>(*d).unwrap());
-        let mut weights: Vec<Weighted<usize>> = distances
+        let weights = distances
             .par_iter()
-            .zip(0..data_len)
-            .map(|p| Weighted {
-                weight: ((num::cast::<V, f64>(*p.0).unwrap() / distance_sum)
-                    * ((std::u32::MAX) as f64))
-                    .floor() as u32,
-                item: p.1,
+            .map(|p| {
+                (num::cast::<V, f64>(*p).unwrap() / distance_sum * (std::u32::MAX as f64)).floor()
+                    as u32
             })
-            .collect();
-        let mut chooser = WeightedChoice::new(&mut weights);
-        let chosen = chooser.sample(&mut rng) as isize;
+            .collect::<Vec<_>>();
+        let choices = WeightedIndex::new(&weights).unwrap();
+        let chosen = (0..n_trials)
+            .fold(None, |prev: Option<(usize, f64)>, _| {
+                let j = choices.sample(&mut rng);
+                let cost = closest_distance(&data.slice(s![j..(j + 1), ..]).view(), &data.view())
+                    .into_iter()
+                    .zip(distances.iter())
+                    .map(|(x, y)| num::cast::<V, f64>(y.min(x)).unwrap())
+                    .sum();
+                if prev.is_none() || cost < prev.unwrap().1 {
+                    return Some((j, cost));
+                }
+                prev
+            })
+            .unwrap()
+            .0;
         means
             .slice_mut(s![i..(i + 1), ..])
             .assign(&data.slice(s![chosen..(chosen + 1), ..]));
@@ -140,38 +157,56 @@ This is a mean initialization method based on the [kmeans++](https://en.wikipedi
 initialization algorithm.
 */
 #[cfg(not(feature = "parallel"))]
-fn initialize_plusplus<V: Value>(data: &ArrayView2<V>, k: usize, seed: Option<u128>) -> Array2<V> {
+fn initialize_plusplus<V: Value>(
+    data: &ArrayView2<V>,
+    k: usize,
+    n_trials: Option<usize>,
+    seed: Option<u128>,
+) -> Array2<V> {
     assert!(k > 1);
     assert!(data.dim().0 > 0);
+    let n_trials = n_trials.unwrap_or(2 + (k as f64).ln().floor() as usize);
+    assert!(n_trials > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
     let mut rng = match seed {
         Some(seed) => SmallRng::from_seed(seed.to_le_bytes()),
         None => SmallRng::from_rng(rand::thread_rng()).unwrap(),
     };
     let data_len = data.shape()[0];
-    let chosen = rng.gen_range(0, data_len) as isize;
+    let chosen = rng.gen_range(0, data_len);
     means
         .slice_mut(s![0..1, ..])
         .assign(&data.slice(s![chosen..(chosen + 1), ..]));
-    for i in 1..k as isize {
+    for i in 1..k {
         // Calculate the distance to the closest mean for each data point
         let distances = closest_distance(&means.slice(s![0..i, ..]).view(), &data.view());
         // Pick a random point weighted by the distance from existing means
         let distance_sum: f64 = distances
             .iter()
             .fold(0.0f64, |sum, d| sum + num::cast::<V, f64>(*d).unwrap());
-        let mut weights: Vec<Weighted<usize>> = distances
+        let weights = distances
             .iter()
-            .zip(0..data_len)
-            .map(|p| Weighted {
-                weight: ((num::cast::<V, f64>(*p.0).unwrap() / distance_sum)
-                    * ((std::u32::MAX) as f64))
-                    .floor() as u32,
-                item: p.1,
+            .map(|p| {
+                (num::cast::<V, f64>(*p).unwrap() / distance_sum * (std::u32::MAX as f64)).floor()
+                    as u32
             })
-            .collect();
-        let chooser = WeightedChoice::new(&mut weights);
-        let chosen = chooser.sample(&mut rng) as isize;
+            .collect::<Vec<_>>();
+        let choices = WeightedIndex::new(&weights).unwrap();
+        let chosen = (0..n_trials)
+            .fold(None, |prev: Option<(usize, f64)>, _| {
+                let j = choices.sample(&mut rng);
+                let cost = closest_distance(&data.slice(s![j..(j + 1), ..]).view(), &data.view())
+                    .into_iter()
+                    .zip(distances.iter())
+                    .map(|(x, y)| num::cast::<V, f64>(y.min(x)).unwrap())
+                    .sum();
+                if prev.is_none() || cost < prev.unwrap().1 {
+                    return Some((j, cost));
+                }
+                prev
+            })
+            .unwrap()
+            .0;
         means
             .slice_mut(s![i..(i + 1), ..])
             .assign(&data.slice(s![chosen..(chosen + 1), ..]));
@@ -284,7 +319,7 @@ fn calculate_means<V: Value>(
         (Array2::zeros(old_means.dim()), vec![0; k]),
         |mut cumulative_means, point| {
             {
-                let mut mean = cumulative_means.0.subview_mut(Axis(0), *point.0);
+                let mut mean = cumulative_means.0.index_axis_mut(Axis(0), *point.0);
                 let n = V::from(cumulative_means.1[*point.0]).unwrap();
                 let step1 = &mean * n;
                 let step2 = &step1 + &point.1;
@@ -306,12 +341,13 @@ fn calculate_means<V: Value>(
 pub fn kmeans_lloyd<V: Value>(
     data: &ArrayView2<V>,
     k: usize,
+    n_trials: Option<usize>,
     seed: Option<u128>,
 ) -> (Array2<V>, Vec<usize>) {
     assert!(k > 1);
     assert!(data.dim().0 >= k);
 
-    let mut old_means = initialize_plusplus(data, k, seed);
+    let mut old_means = initialize_plusplus(data, k, n_trials, seed);
     let mut clusters = calculate_clusters(data, &old_means.view());
     let mut means = calculate_means(data, &clusters, &old_means.view(), k);
 
@@ -427,7 +463,7 @@ mod tests {
         use ndarray::arr2;
         {
             let d = arr2(&[[1.0f32, 1.0f32], [2.0f32, 2.0f32], [3.0f32, 3.0f32]]);
-            kmeans_lloyd(&d.view(), 1, None);
+            kmeans_lloyd(&d.view(), 1, Some(1), None);
         }
     }
 
@@ -447,12 +483,12 @@ mod tests {
                 [1171.0f32, 20.0f32],
             ]);
             let expected_means = arr2(&[
-                [2.0f32, 2.0f32],
                 [1097.5f32, 18.5f32],
+                [2.0f32, 2.0f32],
                 [1060.0f32, 1060.0f32],
             ]);
-            let expected_clusters = vec![0, 0, 0, 2, 2, 2, 1, 1];
-            let (means, clusters) = kmeans_lloyd(&d.view(), 3, Some(0));
+            let expected_clusters = vec![1, 1, 1, 2, 2, 2, 0, 0];
+            let (means, clusters) = kmeans_lloyd(&d.view(), 3, Some(1), Some(0));
             println!("{:?}", means);
             println!("{:?}", clusters);
             assert!(clusters == expected_clusters);
