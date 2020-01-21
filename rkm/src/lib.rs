@@ -140,8 +140,8 @@ fn initialize_plusplus<V: Value>(
     assert!(data.dim().0 > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
     let mut rng = match seed {
-        Some(seed) => XorShiftRng::from_seed(seed),
-        None => XorShiftRng::from_rng(rand::thread_rng()).unwrap(),
+        Some(seed) => SmallRng::from_seed(seed),
+        None => SmallRng::from_rng(rand::thread_rng()).unwrap(),
     };
     let data_len = data.shape()[0];
     let chosen = rng.gen_range(0, data_len) as isize;
@@ -165,7 +165,7 @@ fn initialize_plusplus<V: Value>(
                 item: p.1,
             })
             .collect();
-        let mut chooser = WeightedChoice::new(&mut weights);
+        let chooser = WeightedChoice::new(&mut weights);
         let chosen = chooser.sample(&mut rng) as isize;
         means
             .slice_mut(s![i..(i + 1), ..])
