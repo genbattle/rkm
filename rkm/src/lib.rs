@@ -531,4 +531,6 @@ mod tests {
             assert!(means == expected_means);
         }
     }
+
+    // TODO: tests for new termination conditions
 }

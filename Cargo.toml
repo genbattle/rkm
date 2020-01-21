@@ -1,43 +1,5 @@
-[package]
-name = "rkm"
-version = "0.8.0"
-authors = ["Nick Sarten <gen.battle@gmail.com>"]
-description = "A generic k-means implementation"
-repository = "https://github.com/genbattle/rkm"
-readme = "README.md"
-license = "MIT"
-keywords = ["kmeans", "k-means", "means", "cluster", "clustering"]
-categories = ["algorithms", "science"]
-exclude = ["data/*"]
+[workspace]
 
-[features]
-parallel = ["ndarray-parallel", "rayon"]
-
-[dependencies]
-csv = "1.0.2"
-rand = "0.5.5"
-num = "0.2.0"
-ndarray = "0.12.0"
-bencher = "0.1.5"
-ndarray-parallel = {version = "0.9.0", optional = true}
-rayon = {version = "1.0.3", optional = true}
-
-[lib]
-name = "rkm"
-path = "src/lib.rs"
-
-[[bin]]
-name = "rkm_example"
-path = "src/example.rs"
-
-[[bench]]
-name = "bench"
-path = "src/bench.rs"
-harness = false
-
-# Use for debugging to work around https://github.com/rust-lang/cargo/issues/6301
-# [profile.bench]
-# opt-level = 0
-# debug = 2
-# debug-assertions = true
-# overflow-checks = true
+members = [
+    "rkm"
+]
