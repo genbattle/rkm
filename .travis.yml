@@ -14,5 +14,6 @@ matrix:
     - rust: nightly
   fast_finish: true
 script:
+  - cd rkm
   - cargo build --all-targets --verbose --features=$FEATURES
   - cargo test --verbose --features=$FEATURES
