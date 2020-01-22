@@ -272,7 +272,7 @@ fn calculate_means<V: Value>(
             || (Array2::zeros(old_means.dim()), vec![0; k]),
             |mut totals, point| {
                 {
-                    let mut sum = totals.0.subview_mut(Axis(0), *point.0);
+                    let mut sum = totals.0.index_axis_mut(Axis(0), *point.0);
                     let new_sum = &sum + &point.1;
                     sum.assign(&new_sum);
                     // TODO: file a bug about how + and += work with ndarray
@@ -295,7 +295,7 @@ fn calculate_means<V: Value>(
             },
         );
     for i in 0..k {
-        let mut sum = means.subview_mut(Axis(0), i);
+        let mut sum = means.index_axis_mut(Axis(0), i);
         let new_mean = &sum / V::from(counts[i]).unwrap();
         sum.assign(&new_mean);
     }
@@ -315,7 +315,7 @@ fn calculate_means<V: Value>(
         (Array2::zeros(old_means.dim()), vec![0; k]),
         |mut cumulative_means, point| {
             {
-                let mut mean = cumulative_means.0.subview_mut(Axis(0), *point.0);
+                let mut mean = cumulative_means.0.index_axis_mut(Axis(0), *point.0);
                 let n = V::from(cumulative_means.1[*point.0]).unwrap();
                 let step1 = &mean * n;
                 let step2 = &step1 + &point.1;
