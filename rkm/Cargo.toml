@@ -1,6 +1,6 @@
 [package]
 name = "rkm"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Nick Sarten <gen.battle@gmail.com>"]
 description = "A generic k-means implementation"
 repository = "https://github.com/genbattle/rkm"
