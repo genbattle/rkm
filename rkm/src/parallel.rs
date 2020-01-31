@@ -1,17 +1,14 @@
 // Parallel implementation details
-// #[macro_use(s)]
-// extern crate ndarray;
-
 use ndarray::{Array2, ArrayView2, Axis, Ix};
 use ndarray_parallel::prelude::*;
 use rand::distributions::{Distribution, Weighted, WeightedChoice};
 use rand::prelude::*;
 use rand::Rng;
 use rayon::prelude::*;
-use super::{Value, RandomSeed, distance_squared, closest_mean};
+use crate::common::*;
 
 /// Find the shortest distance between each data point and any of a set of mean points (parallel version).
-fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>) -> Vec<V> {
+pub fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>) -> Vec<V> {
     data.outer_iter()
         .into_par_iter()
         .map(|d| {

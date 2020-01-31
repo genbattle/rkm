@@ -1,11 +1,4 @@
 // Serial (single threaded) implementation details
-/*
-This crate contains a simple implementation of the
-[k-means clustering algorithm](http://en.wikipedia.org/wiki/K-means_clustering).
-*/
-// #[macro_use(s)]
-// extern crate ndarray;
-
 use ndarray::{Array2, ArrayView2, Axis, Ix};
 use rand::distributions::{Distribution, Weighted, WeightedChoice};
 use rand::prelude::*;
