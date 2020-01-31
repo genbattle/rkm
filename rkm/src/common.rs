@@ -21,10 +21,6 @@ pub type RandomSeed = <rand::XorShiftRng as rand::SeedableRng>::Seed;
 /// Find the square of the distance between two data points, given as Array rows.
 pub fn distance_squared<V: Value>(point_a: &ArrayView1<V>, point_b: &ArrayView1<V>) -> V {
     let mut distance = V::zero();
-    // point_a.iter().zip(point_b.iter()).fold(V::zero(), |distance, points|{
-    //     let delta = *points.0 - *points.1;
-    //     distance + (delta * delta)
-    // })
     for i in 0..point_a.shape()[0] {
         let delta = point_a[i] - point_b[i];
         distance = distance + (delta * delta)
