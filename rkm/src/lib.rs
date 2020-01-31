@@ -16,12 +16,14 @@ cfg_if::cfg_if! {
 }
 mod common;
 use common::*;
-pub use common::{Value, RandomSeed};
+pub use common::{RandomSeed, Value};
 
 /// Algorithm configuration parameters, passed to `rkm::kmeans_lloyd` to specify:
+///
 /// * Random number generator seed
 /// * The maximum number of iterations to terminate the algorithm at
 /// * The minimum delta for all means from iteration to iteration
+///
 /// The algorithm will terminate if the maximum number of iterations is exceeded, or none of the means
 /// change by at least the minimum delta distance, or the algorithm converges.
 #[derive(Debug)]
@@ -79,9 +81,11 @@ fn deltas_below_limit<V: Value>(
 /// map into the means ndarray and correspond elementwise to each input data point to give
 /// the cluster assignments for each data point. Takes a `Config` object which can be used to
 /// optionally specify:
+///
 /// * Random number seed (for initialization)
 /// * Maximum number of iterations
 /// * Minimum mean delta distance
+///
 /// The algorithm will terminate when convergence is reached, or the number of iterations
 /// equals the maximum, or none of the means change by at least the minimum delta distance.
 pub fn kmeans_lloyd_with_config<V: Value>(

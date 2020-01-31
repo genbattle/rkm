@@ -52,4 +52,3 @@ pub fn closest_mean<V: Value>(point: &ArrayView1<V>, means: &ArrayView2<V>) -> I
     }
     return 0; // Should never hit this due to the assertion of the precondition
 }
-
