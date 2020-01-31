@@ -1,3 +1,4 @@
+#![warn(clippy::all)]
 /// This crate contains a simple implementation of the
 /// [k-means clustering algorithm](http://en.wikipedia.org/wiki/K-means_clustering).
 #[macro_use(s)]
@@ -43,9 +44,9 @@ impl<V: Value> Config<V> {
         min_delta: Option<V>,
     ) -> Config<V> {
         Config {
-            random_seed: random_seed,
-            max_iterations: max_iterations,
-            min_delta: min_delta,
+            random_seed,
+            max_iterations,
+            min_delta,
         }
     }
 
@@ -130,6 +131,8 @@ pub fn kmeans_lloyd<V: Value>(data: &ArrayView2<V>, k: usize) -> (Array2<V>, Vec
 
 #[cfg(test)]
 mod tests {
+    use assert_approx_eq::assert_approx_eq;
+
     #[test]
     fn test_distance() {
         use super::distance_squared;
@@ -139,9 +142,9 @@ mod tests {
         let c = arr1(&[1200.0f32, 1200.0f32]);
         let d = arr1(&[1.0f32, 1.0f32]);
         let e = arr1(&[1200.0f32, 1200.0f32]);
-        assert_eq!(distance_squared(&a.view(), &b.view()), 2.0f32);
-        assert_eq!(distance_squared(&a.view(), &c.view()), 2875202.0f32);
-        assert_eq!(distance_squared(&d.view(), &e.view()), 2875202.0f32);
+        assert_approx_eq!(distance_squared(&a.view(), &b.view()), 2.0f32);
+        assert_approx_eq!(distance_squared(&a.view(), &c.view()), 2_875_202.0f32);
+        assert_approx_eq!(distance_squared(&d.view(), &e.view()), 2_875_202.0f32);
     }
 
     #[test]

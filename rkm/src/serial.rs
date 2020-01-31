@@ -41,7 +41,7 @@ pub fn initialize_plusplus<V: Value>(
     let chosen = rng.gen_range(0, data_len) as isize;
     means
         .slice_mut(s![0..1, ..])
-        .assign(&data.slice(s![chosen..(chosen + 1), ..]));
+        .assign(&data.slice(s![chosen..=chosen, ..]));
     for i in 1..k as isize {
         // Calculate the distance to the closest mean for each data point
         let distances = closest_distance(&means.slice(s![0..i, ..]).view(), &data.view());
@@ -62,8 +62,8 @@ pub fn initialize_plusplus<V: Value>(
         let chooser = WeightedChoice::new(&mut weights);
         let chosen = chooser.sample(&mut rng) as isize;
         means
-            .slice_mut(s![i..(i + 1), ..])
-            .assign(&data.slice(s![chosen..(chosen + 1), ..]));
+            .slice_mut(s![i..=i, ..])
+            .assign(&data.slice(s![chosen..=chosen, ..]));
     }
     means
 }
@@ -78,7 +78,7 @@ pub fn calculate_clusters<V: Value>(data: &ArrayView2<V>, means: &ArrayView2<V>)
 /// Calculate means based on data points and their cluster assignments.
 pub fn calculate_means<V: Value>(
     data: &ArrayView2<V>,
-    clusters: &Vec<Ix>,
+    clusters: &[Ix],
     old_means: &ArrayView2<V>,
     k: usize,
 ) -> Array2<V> {
