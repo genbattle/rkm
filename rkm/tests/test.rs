@@ -1,5 +1,6 @@
 use ndarray::{arr2, Array2};
 use rkm::{Config, kmeans_lloyd, kmeans_lloyd_with_config};
+use assert_approx_eq::assert_approx_eq;
 
 fn read_test_data(data_path: &str, dim: usize) -> Array2<f32> {
     use std::str::FromStr;
@@ -41,10 +42,11 @@ fn test_small_kmeans() {
     let expected_clusters = vec![0, 0, 0, 2, 2, 2, 1, 1];
     let config = Config::from(Some((0 as u128).to_le_bytes()), None, None);
     let (means, clusters) = kmeans_lloyd_with_config(&d.view(), 3, &config);
-    println!("{:?}", means);
-    println!("{:?}", clusters);
-    assert!(clusters == expected_clusters);
-    assert!(means == expected_means);
+    assert_eq!(clusters, expected_clusters);
+    means.iter().zip(expected_means.iter())
+        .for_each(|m|{
+            assert_approx_eq!(m.0, m.1);
+        });
 }
 
 #[test]
@@ -58,8 +60,11 @@ fn test_iris() {
     let config = Config::from(Some((100 as u128).to_le_bytes()), None, None);
     let (means, clusters) = kmeans_lloyd_with_config(&data.view(), 3, &config);
     // not checking actual cluster values because there are too many
-    assert!(clusters.len() == data.dim().0);
-    assert!(means == expected_means);
+    assert_eq!(clusters.len(), data.dim().0);
+    means.iter().zip(expected_means.iter())
+        .for_each(|m|{
+            assert_approx_eq!(m.0, m.1);
+        });
 }
 // TODO: tests for new termination conditions
 
