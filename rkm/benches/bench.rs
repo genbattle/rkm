@@ -1,6 +1,3 @@
-extern crate csv;
-extern crate ndarray;
-extern crate rkm;
 #[macro_use]
 extern crate bencher;
 

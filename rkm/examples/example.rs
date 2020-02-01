@@ -1,3 +1,14 @@
+/// example.rs - a basic example that loads the simple iris data set.
+///
+/// The data set is fed into the k-means algorithm and then the means
+/// and clusters are printed. TODO: a better output visualisation.
+///
+/// This example must be run from the crate root for the relative paths
+/// for the example data to be correct; this program will panic if the
+/// input file cannot be found.
+///
+/// You can run this program with the cargo run command:
+/// `cargo run --example example`
 extern crate csv;
 extern crate ndarray;
 extern crate rkm;

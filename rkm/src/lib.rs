@@ -20,13 +20,13 @@ use common::*;
 pub use common::{RandomSeed, Value};
 
 /// Algorithm configuration parameters.
-/// 
+///
 /// Passed to `rkm::kmeans_lloyd` to specify:
-/// 
+///
 /// * Random number generator seed.
 /// * The maximum number of iterations to terminate the algorithm at.
 /// * The minimum delta for all means from iteration to iteration.
-/// 
+///
 /// The algorithm will terminate if the maximum number of iterations is exceeded, or none of the means
 /// change by at least the minimum delta distance, or the algorithm converges.
 #[derive(Debug)]
@@ -79,18 +79,18 @@ fn deltas_below_limit<V: Value>(
     deltas.into_iter().all(|d| d < limit)
 }
 
-/// Calculate means and cluster assignments for the given data and number of clusters (k) with 
+/// Calculate means and cluster assignments for the given data and number of clusters (k) with
 /// a set of optional parameters.
-/// 
+///
 /// Returns a tuple containing the means (as a 2D ndarray) and a `Vec` of indices that
 /// map into the means ndarray and correspond elementwise to each input data point to give
 /// the cluster assignments for each data point. Takes a `Config` object which can be used to
 /// optionally specify:
-/// 
+///
 /// * Random number seed (for initialization)
 /// * Maximum number of iterations
 /// * Minimum mean delta distance
-/// 
+///
 /// The algorithm will terminate when convergence is reached, or the number of iterations
 /// equals the maximum, or none of the means change by at least the minimum delta distance.
 pub fn kmeans_lloyd_with_config<V: Value>(
@@ -121,7 +121,7 @@ pub fn kmeans_lloyd_with_config<V: Value>(
 }
 
 /// Calculate means and cluster assignments for the given data and number of clusters (k).
-/// 
+///
 /// Returns a tuple containing the means (as a 2D ndarray) and a `Vec` of indices that
 /// map into the means ndarray and correspond elementwise to each input data point to give
 /// the cluster assignments for each data point.
