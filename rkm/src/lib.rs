@@ -226,48 +226,4 @@ mod tests {
             assert_eq!(calculate_means(&d.view(), &c, &m.view(), 4), expected_means);
         }
     }
-
-    #[test]
-    #[should_panic(expected = "assertion failed")]
-    fn test_min_k() {
-        use super::kmeans_lloyd;
-        use ndarray::arr2;
-        {
-            let d = arr2(&[[1.0f32, 1.0f32], [2.0f32, 2.0f32], [3.0f32, 3.0f32]]);
-            kmeans_lloyd(&d.view(), 1);
-        }
-    }
-
-    #[test]
-    fn test_small_kmeans() {
-        use super::kmeans_lloyd_with_config;
-        use super::Config;
-        use ndarray::arr2;
-        {
-            let d = arr2(&[
-                [1.0f32, 1.0f32],
-                [2.0f32, 2.0f32],
-                [3.0f32, 3.0f32],
-                [1200.0f32, 1200.0f32],
-                [956.0f32, 956.0f32],
-                [1024.0f32, 1024.0f32],
-                [1024.0f32, 17.0f32],
-                [1171.0f32, 20.0f32],
-            ]);
-            let expected_means = arr2(&[
-                [2.0f32, 2.0f32],
-                [1097.5f32, 18.5f32],
-                [1060.0f32, 1060.0f32],
-            ]);
-            let expected_clusters = vec![0, 0, 0, 2, 2, 2, 1, 1];
-            let config = Config::from(Some((0 as u128).to_le_bytes()), None, None);
-            let (means, clusters) = kmeans_lloyd_with_config(&d.view(), 3, &config);
-            println!("{:?}", means);
-            println!("{:?}", clusters);
-            assert!(clusters == expected_clusters);
-            assert!(means == expected_means);
-        }
-    }
-
-    // TODO: tests for new termination conditions
 }
