@@ -8,7 +8,7 @@ This implementation is generic, and will accept any type that satisfies the trai
 
 The `parallel` feature enables parallelism to speed up the algorithm in complex cases. The parallel algorithm may be slower than the non-parallel algorithm for small data sets, but is much faster for data sets with high dimensionality. Make sure you benchmark your use case with both configurations before deciding which to use.
 
-Known to compile against Rust stable 1.32.0.
+Known to compile against Rust stable 1.41.0.
 
 ### Usage ###
 
@@ -16,10 +16,8 @@ Calculate the k-means clusters for a set of data by calling `rkm::kmeans_lloyd` 
 
 See `examples/example.rs` for a simple usage example.
 
-### TODOs ###
-* Termination conditions (iterations and delta).
-
 ### Data ###
+
  A small set of benchmarks for this library is included in `benches/bench.rs`. The data sets are as follows:
 
 `iris.data.csv` natural data taken from measurements of different iris plants. 150 points, 2 dimensions, 3 clusters. Source: [UCI machine learning repository](https://archive.ics.uci.edu/ml/datasets/Iris).
@@ -33,4 +31,5 @@ See `examples/example.rs` for a simple usage example.
 Compared to [dkm](https://github.com/genbattle/dkm) this implementation is slower for the small iris and s1 data sets, but faster for the `dim128` and `birch3` data sets.
 
 ### Licensing ###
+
  This code is licensed under the MIT license.
