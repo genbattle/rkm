@@ -224,8 +224,10 @@ mod tests {
                 [0.0f32, 0.0f32],
             ]);
             assert_eq!(calculate_means(&d.view(), &c, &m.view(), 4), expected_means);
-            calculate_means(&d.view(), &c, &m.view(), 4).iter().zip(expected_means.iter())
-                .for_each(|m|{
+            calculate_means(&d.view(), &c, &m.view(), 4)
+                .iter()
+                .zip(expected_means.iter())
+                .for_each(|m| {
                     assert_approx_eq!(m.0, m.1);
                 });
         }
