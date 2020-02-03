@@ -1,8 +1,9 @@
 // Serial (single threaded) implementation details
 use ndarray::{Array2, ArrayView2, Axis, Ix};
-use rand::distributions::{Distribution, Weighted, WeightedChoice};
+use rand::distributions::{Distribution, WeightedIndex};
 use rand::prelude::*;
-use rand::Rng;
+use rand::SeedableRng;
+use rand::rngs::SmallRng;
 //use super::{Value, RandomSeed, distance_squared, closest_mean};
 use crate::common::*;
 
@@ -28,13 +29,13 @@ pub fn closest_distance<V: Value>(means: &ArrayView2<V>, data: &ArrayView2<V>) -
 pub fn initialize_plusplus<V: Value>(
     data: &ArrayView2<V>,
     k: usize,
-    seed: Option<RandomSeed>,
+    seed: Option<u64>,
 ) -> Array2<V> {
     assert!(k > 1);
     assert!(data.dim().0 > 0);
     let mut means = Array2::zeros((k as usize, data.shape()[1]));
     let mut rng = match seed {
-        Some(seed) => SmallRng::from_seed(seed),
+        Some(seed) => SmallRng::seed_from_u64(seed),
         None => SmallRng::from_rng(rand::thread_rng()).unwrap(),
     };
     let data_len = data.shape()[0];
@@ -46,21 +47,15 @@ pub fn initialize_plusplus<V: Value>(
         // Calculate the distance to the closest mean for each data point
         let distances = closest_distance(&means.slice(s![0..i, ..]).view(), &data.view());
         // Pick a random point weighted by the distance from existing means
-        let distance_sum: f64 = distances
+        let distance_sum: f32 = distances
             .iter()
-            .fold(0.0f64, |sum, d| sum + num::cast::<V, f64>(*d).unwrap());
-        let mut weights: Vec<Weighted<usize>> = distances
+            .fold(0.0f32, |sum, d| sum + num::cast::<V, f32>(*d).unwrap());
+        let weights: Vec<f32> = distances
             .iter()
-            .zip(0..data_len)
-            .map(|p| Weighted {
-                weight: ((num::cast::<V, f64>(*p.0).unwrap() / distance_sum)
-                    * ((std::u32::MAX) as f64))
-                    .floor() as u32,
-                item: p.1,
-            })
+            .map(|p| num::cast::<V, f32>(*p).unwrap() / distance_sum)
             .collect();
-        let chooser = WeightedChoice::new(&mut weights);
-        let chosen = chooser.sample(&mut rng) as isize;
+        let chooser = WeightedIndex::new(&weights).unwrap();
+        let chosen = chooser.sample(&mut rng);
         means
             .slice_mut(s![i..=i, ..])
             .assign(&data.slice(s![chosen..=chosen, ..]));

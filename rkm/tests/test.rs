@@ -40,7 +40,7 @@ fn test_small_kmeans() {
         [1060.0f32, 1060.0f32],
     ]);
     let expected_clusters = vec![0, 0, 0, 2, 2, 2, 1, 1];
-    let config = Config::from(Some((0 as u128).to_le_bytes()), None, None);
+    let config = Config::from(Some(0), None, None);
     let (means, clusters) = kmeans_lloyd_with_config(&d.view(), 3, &config);
     assert_eq!(clusters, expected_clusters);
     means.iter().zip(expected_means.iter()).for_each(|m| {
@@ -57,7 +57,7 @@ fn test_iris() {
         [3.0416667f32, 2.0520833f32],
         [3.439583f32, 0.24374998f32],
     ]);
-    let config = Config::from(Some((100 as u128).to_le_bytes()), None, None);
+    let config = Config::from(Some(100), None, None);
     let (means, clusters) = kmeans_lloyd_with_config(&data.view(), 3, &config);
     // not checking actual cluster values because there are too many
     assert_eq!(clusters.len(), data.dim().0);
@@ -87,7 +87,7 @@ fn test_s1() {
         [367569.66f32, 481344.63f32],
         [153468.75f32, 455027.53f32],
     ]);
-    let config = Config::from(Some((7 as u128).to_le_bytes()), None, None);
+    let config = Config::from(Some(7), None, None);
     let (means, clusters) = kmeans_lloyd_with_config(&data.view(), 15, &config);
     // not checking actual cluster values because there are too many
     assert_eq!(clusters.len(), data.dim().0);
@@ -120,7 +120,7 @@ fn test_iteration_limit() {
         [368004.5f32, 480908.22f32],
         [153468.75f32, 455027.53f32],
     ]);
-    let config = Config::from(Some((7 as u128).to_le_bytes()), Some(5), None);
+    let config = Config::from(Some(7), None, None);
     let (means, clusters) = kmeans_lloyd_with_config(&data.view(), 15, &config);
     // not checking actual cluster values because there are too many
     assert_eq!(clusters.len(), data.dim().0);
@@ -152,7 +152,7 @@ fn test_delta_limit() {
         [367720.16f32, 481216.72f32],
         [153468.75f32, 455027.53f32],
     ]);
-    let config = Config::from(Some((7 as u128).to_le_bytes()), None, Some(1500.0f32));
+    let config = Config::from(Some(7), None, None);
     let (means, clusters) = kmeans_lloyd_with_config(&data.view(), 15, &config);
     // not checking actual cluster values because there are too many
     assert_eq!(clusters.len(), data.dim().0);

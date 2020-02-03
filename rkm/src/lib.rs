@@ -17,7 +17,7 @@ cfg_if::cfg_if! {
 }
 mod common;
 use common::*;
-pub use common::{RandomSeed, Value};
+pub use common::Value;
 
 /// Algorithm configuration parameters.
 ///
@@ -31,7 +31,7 @@ pub use common::{RandomSeed, Value};
 /// change by at least the minimum delta distance, or the algorithm converges.
 #[derive(Debug)]
 pub struct Config<V: Value> {
-    random_seed: Option<RandomSeed>,
+    random_seed: Option<u64>,
     max_iterations: Option<u64>,
     min_delta: Option<V>,
 }
@@ -39,7 +39,7 @@ pub struct Config<V: Value> {
 impl<V: Value> Config<V> {
     /// Create a new config struct from a partial or complete set of parameters
     pub fn from(
-        random_seed: Option<RandomSeed>,
+        random_seed: Option<u64>,
         max_iterations: Option<u64>,
         min_delta: Option<V>,
     ) -> Config<V> {
