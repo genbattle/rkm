@@ -9,12 +9,9 @@
 ///
 /// You can run this program with the cargo run command:
 /// `cargo run --example example`
-extern crate csv;
-extern crate ndarray;
-extern crate rkm;
-
-use ndarray::Array2;
+use ndarray::{Array2, ArrayView2};
 use std::str::FromStr;
+use plotters::prelude::*;
 
 fn read_test_data() -> Array2<f32> {
     let mut data_reader = csv::Reader::from_path("data/iris.data.csv").unwrap();
@@ -28,6 +25,26 @@ fn read_test_data() -> Array2<f32> {
     Array2::from_shape_vec((data.len() / 2, 2), data).unwrap()
 }
 
+fn plot_means_clusters(data: &ArrayView2<f32>, means: &ArrayView2<f32>, clusters: &[usize]) {
+    let root_area = BitMapBackend::new("test.png", (800, 600)).into_drawing_area();
+    root_area.fill(&WHITE).unwrap();
+
+    let mut context = ChartBuilder::on(&root_area)
+        .set_label_area_size(LabelAreaPosition::Left, 40)
+        .set_label_area_size(LabelAreaPosition::Bottom, 40)
+        .caption("K Means Demo", ("Arial", 40))
+        .build_ranged(1.8f32..5.0f32, 0.0f32..3.0f32)
+        .unwrap();
+    
+    context.configure_mesh().draw().unwrap();
+    context.draw_series(data.outer_iter()
+        .map(|coords| Circle::new((coords[0], coords[1]), 3, GREEN.filled())))
+        .unwrap();
+    context.draw_series(means.outer_iter()
+        .map(|coords| Circle::new((coords[0], coords[1]), 3, RED.filled())))
+        .unwrap();
+}
+
 pub fn main() {
     let data = read_test_data();
     let (means, clusters) = rkm::kmeans_lloyd(&data.view(), 3);
@@ -35,4 +52,5 @@ pub fn main() {
         "data:\n{:?}\nmeans:\n{:?}\nclusters:\n{:?}",
         data, means, clusters
     );
+    plot_means_clusters(&data.view(), &means.view(), &clusters);
 }
