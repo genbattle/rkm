@@ -16,7 +16,6 @@ impl<T> Value for T where
 {
 }
 
-
 /// Find the square of the distance between two data points, given as Array rows.
 pub fn distance_squared<V: Value>(point_a: &ArrayView1<V>, point_b: &ArrayView1<V>) -> V {
     let mut distance = V::zero();

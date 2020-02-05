@@ -34,11 +34,7 @@ fn test_small_kmeans() {
         [1024.0f32, 17.0f32],
         [1171.0f32, 20.0f32],
     ]);
-    let expected_means = arr2(&[
-        [1060.0, 1060.0],
-        [1097.5, 18.5],
-        [2.0, 2.0]
-    ]);
+    let expected_means = arr2(&[[1060.0, 1060.0], [1097.5, 18.5], [2.0, 2.0]]);
     let expected_clusters = vec![2, 2, 2, 0, 0, 0, 1, 1];
     let config = Config::from(Some(0), None, None);
     let (means, clusters) = kmeans_lloyd_with_config(&d.view(), 3, &config);
@@ -87,7 +83,7 @@ fn test_s1() {
         [617926.6, 399415.97],
         [320602.44, 161521.75],
         [165909.27, 364343.53],
-        [856919.2, 566696.56]
+        [856919.2, 566696.56],
     ]);
     let config = Config::from(Some(0), None, None);
     let (means, clusters) = kmeans_lloyd_with_config(&data.view(), 15, &config);
@@ -121,7 +117,7 @@ fn test_iteration_limit() {
         [617926.6, 399415.97],
         [320602.44, 161521.75],
         [165909.27, 364343.53],
-        [856919.2, 566696.56]
+        [856919.2, 566696.56],
     ]);
     let config = Config::from(Some(0), None, None);
     let (means, clusters) = kmeans_lloyd_with_config(&data.view(), 15, &config);
@@ -154,7 +150,7 @@ fn test_delta_limit() {
         [617926.6, 399415.97],
         [320602.44, 161521.75],
         [165909.27, 364343.53],
-        [856919.2, 566696.56]
+        [856919.2, 566696.56],
     ]);
     let config = Config::from(Some(0), None, None);
     let (means, clusters) = kmeans_lloyd_with_config(&data.view(), 15, &config);

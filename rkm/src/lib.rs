@@ -16,8 +16,8 @@ cfg_if::cfg_if! {
     }
 }
 mod common;
-use common::*;
 pub use common::Value;
+use common::*;
 
 /// Algorithm configuration parameters.
 ///

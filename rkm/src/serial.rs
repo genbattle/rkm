@@ -2,8 +2,8 @@
 use ndarray::{Array2, ArrayView2, Axis, Ix};
 use rand::distributions::{Distribution, WeightedIndex};
 use rand::prelude::*;
-use rand::SeedableRng;
 use rand::rngs::SmallRng;
+use rand::SeedableRng;
 //use super::{Value, RandomSeed, distance_squared, closest_mean};
 use crate::common::*;
 
